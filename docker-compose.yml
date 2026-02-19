@@ -1,0 +1,137 @@
+# =============================================================================
+# UrbanNest – Local Development Stack
+# =============================================================================
+# Commands:
+#   docker compose up -d        Start all services in the background
+#   docker compose down         Stop & remove containers (keeps volumes)
+#   docker compose down -v      Stop & remove containers + wipe all data
+#   docker compose logs -f      Stream logs from all services
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL – Primary Relational Database
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:17-alpine
+    container_name: nest_postgres
+    ports:
+      - '${DB_PORT:-5432}:5432'
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_DATABASE:-nest_starter}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - nest_network
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_DATABASE:-nest_starter}',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # ---------------------------------------------------------------------------
+  # Redis – Caching & OTP Session Store
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: nest_redis
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - nest_network
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # ---------------------------------------------------------------------------
+  # MinIO – S3-Compatible Object Storage
+  #   API Console: http://localhost:9001  (login: minioadmin / minioadmin)
+  # ---------------------------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: nest_minio
+    ports:
+      - '${MINIO_PORT:-9000}:9000'
+      - '${MINIO_CONSOLE_PORT:-9001}:9001'
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    command: server /data --console-address ':9001'
+    volumes:
+      - minio_data:/data
+    networks:
+      - nest_network
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # ---------------------------------------------------------------------------
+  # Mailpit – Local SMTP Server & Email UI (dev only)
+  #   Web UI: http://localhost:8025
+  #   SMTP:   localhost:1025
+  # ---------------------------------------------------------------------------
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: nest_mailpit
+    ports:
+      - '${MAIL_PORT:-1025}:1025'
+      - '${MAIL_UI_PORT:-8025}:8025'
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_DATABASE: /data/mailpit.db
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    volumes:
+      - mailpit_data:/data
+    networks:
+      - nest_network
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: '5m'
+        max-file: '2'
+
+# =============================================================================
+networks:
+  nest_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  mailpit_data:
