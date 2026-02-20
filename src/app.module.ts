@@ -24,6 +24,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { MediaModule } from './media/media.module';
 import { MinioModule } from './minio/minio.module';
+import { ListingModule } from './listing/listing.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { MinioModule } from './minio/minio.module';
     MailModule,
     MinioModule,
     MediaModule,
+    ListingModule,
   ],
   controllers: [AppController],
   providers: [
