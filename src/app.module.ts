@@ -25,6 +25,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
 import { MediaModule } from './media/media.module';
 import { MinioModule } from './minio/minio.module';
 import { ListingModule } from './listing/listing.module';
+import { BrandsModule } from './brands/brands.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ListingModule } from './listing/listing.module';
     MinioModule,
     MediaModule,
     ListingModule,
+    BrandsModule,
   ],
   controllers: [AppController],
   providers: [
