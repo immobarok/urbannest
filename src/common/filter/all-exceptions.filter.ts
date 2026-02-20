@@ -35,9 +35,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
     const response = ctx.getResponse<Response>();
 
-    const correlationId = (request as any).correlationId as
-      | string
-      | undefined;
+    const correlationId = (request as any).correlationId as string | undefined;
 
     // Log the full error for internal debugging
     this.logger.error(

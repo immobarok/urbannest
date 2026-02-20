@@ -69,9 +69,7 @@ export class ValidationExceptionFilter implements ExceptionFilter {
         ? errors[0].message
         : `Validation failed on ${errors.length} field(s)`;
 
-    const correlationId = (request as any).correlationId as
-      | string
-      | undefined;
+    const correlationId = (request as any).correlationId as string | undefined;
 
     this.logger.warn(
       `[${correlationId ?? 'N/A'}] Validation failed: ${request.method} ${request.originalUrl} – ${summary}`,
@@ -93,9 +91,7 @@ export class ValidationExceptionFilter implements ExceptionFilter {
    * Converts the heterogeneous `message` shape from `ValidationPipe` into
    * a uniform `ValidationError[]`.
    */
-  private normaliseErrors(
-    messages: unknown,
-  ): ValidationError[] {
+  private normaliseErrors(messages: unknown): ValidationError[] {
     if (Array.isArray(messages)) {
       return messages.map((msg) => {
         if (typeof msg === 'string') {

@@ -38,9 +38,7 @@ export class CorrelationIdMiddleware implements NestMiddleware {
     // Echo back in the response header
     _res.setHeader('X-Correlation-Id', correlationId);
 
-    this.logger.debug(
-      `[${correlationId}] ${req.method} ${req.originalUrl}`,
-    );
+    this.logger.debug(`[${correlationId}] ${req.method} ${req.originalUrl}`);
 
     next();
   }

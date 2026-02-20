@@ -62,7 +62,7 @@ export class AuthService {
         passwordHash,
         firstName: dto.firstName,
         lastName: dto.lastName,
-        role: dto.role ?? Role.GUEST,
+        role: Role.GUEST,
       },
     });
 
@@ -90,14 +90,9 @@ export class AuthService {
   async validateUser(
     email: string,
     pass: string,
-    role?: Role,
   ): Promise<AuthenticatedUser | null> {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
-      return null;
-    }
-
-    if (role && user.role !== role) {
       return null;
     }
 

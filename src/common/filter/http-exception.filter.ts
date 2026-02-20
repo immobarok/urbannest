@@ -3,7 +3,6 @@ import {
   Catch,
   ExceptionFilter,
   HttpException,
-  HttpStatus,
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
@@ -50,9 +49,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     const statusCode = exception.getStatus();
     const exceptionResponse = exception.getResponse();
-    const correlationId = (request as any).correlationId as
-      | string
-      | undefined;
+    const correlationId = (request as Request & { correlationId?: string })
+      .correlationId;
 
     // Normalise the message regardless of how the exception was constructed
     let message: string;
@@ -62,8 +60,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
       typeof exceptionResponse === 'object' &&
       exceptionResponse !== null
     ) {
-      const msg = (exceptionResponse as any).message;
-      message = Array.isArray(msg) ? msg.join('; ') : (msg ?? exception.message);
+      const msg = (exceptionResponse as Record<string, unknown>).message;
+      message = Array.isArray(msg)
+        ? (msg as string[]).join('; ')
+        : typeof msg === 'string'
+          ? msg
+          : exception.message;
     } else {
       message = exception.message;
     }

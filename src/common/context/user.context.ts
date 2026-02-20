@@ -82,7 +82,7 @@ export class UserContext {
    * @returns User ID string or `undefined`.
    */
   static currentUserId(): string | undefined {
-    return (this.currentUser() as BaseUserPayload | undefined)?.id;
+    return this.currentUser()?.id;
   }
 
   /**
@@ -91,7 +91,7 @@ export class UserContext {
    * @returns Email string or `undefined`.
    */
   static currentUserEmail(): string | undefined {
-    return (this.currentUser() as BaseUserPayload | undefined)?.email;
+    return this.currentUser()?.email;
   }
 
   /**
@@ -101,9 +101,7 @@ export class UserContext {
    *          are present.
    */
   static currentUserRoles(): string[] {
-    return (
-      (this.currentUser() as BaseUserPayload | undefined)?.roles ?? []
-    );
+    return this.currentUser()?.roles ?? [];
   }
 
   /**
