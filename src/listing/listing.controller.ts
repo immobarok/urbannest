@@ -1,4 +1,3 @@
-/// <reference types="multer" />
 import {
   Body,
   Controller,
