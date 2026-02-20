@@ -1,0 +1,54 @@
+// ============================================================
+// UrbanNest – Booking
+// ============================================================
+
+model Booking {
+  id        String @id @default(cuid())
+  listingId String
+  guestId   String
+
+  checkIn    DateTime @db.Date
+  checkOut   DateTime @db.Date
+  nights     Int
+  guestCount Int
+
+  status BookingStatus @default(PENDING)
+
+  // Price snapshot at time of booking
+  baseAmount      Decimal @db.Decimal(10, 2)
+  cleaningFee     Decimal @default(0) @db.Decimal(10, 2)
+  serviceFee      Decimal @db.Decimal(10, 2)
+  securityDeposit Decimal @default(0) @db.Decimal(10, 2)
+  totalAmount     Decimal @db.Decimal(10, 2)
+  hostPayout      Decimal @db.Decimal(10, 2) // totalAmount minus platform fee
+
+  // Guest / cancellation notes
+  guestNote          String?
+  cancellationReason String?
+  cancelledById      String?
+  cancelledAt        DateTime?
+
+  // Timestamps
+  confirmedAt DateTime?
+  completedAt DateTime?
+
+  // Reminder flags (prevents duplicate emails)
+  checkInReminderSent Boolean @default(false)
+  reviewReminderSent  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  listing  Listing   @relation(fields: [listingId], references: [id])
+  guest    User      @relation("GuestBookings", fields: [guestId], references: [id])
+  payments Payment[]
+  review   Review?
+  dispute  Dispute?
+
+  @@index([listingId])
+  @@index([guestId])
+  @@index([status])
+  @@index([checkIn, checkOut])
+  @@map("bookings")
+}

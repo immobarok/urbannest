@@ -5,20 +5,34 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
+import { compare, genSalt, hash } from 'bcrypt';
+import { StringValue } from 'ms';
 // import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { MailService } from '../mail/mail.service';
 import {
   RegisterDto,
-  LoginDto,
   VerifyEmailDto,
   ForgotPasswordDto,
   ResetPasswordDto,
   RefreshTokenDto,
 } from './dto';
-import { Role } from '../common/decorators/roles.decorator';
+import { Role, type User } from '@prisma/client';
+import {
+  AuthTokensEntity,
+  MessageResponseEntity,
+  RegisterResponseEntity,
+} from './entities';
+
+type AuthenticatedUser = Omit<User, 'passwordHash'>;
+
+interface JwtPayload {
+  sub: string;
+  email: string;
+  role: Role;
+  isEmailVerified: boolean;
+}
 
 @Injectable()
 export class AuthService {
@@ -31,7 +45,7 @@ export class AuthService {
     private mail: MailService,
   ) {}
 
-  async register(dto: RegisterDto) {
+  async register(dto: RegisterDto): Promise<RegisterResponseEntity> {
     const exists = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
@@ -39,16 +53,16 @@ export class AuthService {
       throw new BadRequestException('User already exists');
     }
 
-    const salt = await bcrypt.genSalt();
-    const hash = await bcrypt.hash(dto.password, salt);
+    const salt = (await genSalt()) as string;
+    const passwordHash = (await hash(dto.password, salt)) as string;
 
     const user = await this.prisma.user.create({
       data: {
         email: dto.email,
-        password: hash,
+        passwordHash,
         firstName: dto.firstName,
         lastName: dto.lastName,
-        role: Role.USER, // Default role
+        role: dto.role ?? Role.GUEST,
       },
     });
 
@@ -67,34 +81,51 @@ export class AuthService {
       );
     });
 
-    return { message: 'User registered. Please check email for OTP.' };
+    return {
+      message: 'User registered. Please check email for OTP.',
+      role: user.role,
+    };
   }
 
-  async validateUser(email: string, pass: string): Promise<any> {
+  async validateUser(
+    email: string,
+    pass: string,
+    role?: Role,
+  ): Promise<AuthenticatedUser | null> {
     const user = await this.prisma.user.findUnique({ where: { email } });
-    if (user && (await bcrypt.compare(pass, user.password))) {
+    if (!user) {
+      return null;
+    }
+
+    if (role && user.role !== role) {
+      return null;
+    }
+
+    if (await compare(pass, user.passwordHash)) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, ...result } = user;
+      const { passwordHash, ...result } = user;
       return result;
     }
+
     return null;
   }
 
-  async login(user: any) {
-    if (!user.isVerified) {
+  login(user: AuthenticatedUser): AuthTokensEntity {
+    if (!user.isEmailVerified) {
       throw new UnauthorizedException('Email not verified');
     }
 
-    const payload = {
+    const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
       role: user.role,
-      isVerified: user.isVerified,
+      isEmailVerified: user.isEmailVerified,
     };
 
     const accessToken = this.jwtService.sign(payload);
+    const refreshExpiresIn = '7d' as StringValue;
     const refreshToken = this.jwtService.sign(payload, {
-      expiresIn: process.env.JWT_REFRESH_EXPIRES_IN as any,
+      expiresIn: refreshExpiresIn,
     });
 
     return {
@@ -110,7 +141,7 @@ export class AuthService {
     };
   }
 
-  async verifyEmail(dto: VerifyEmailDto) {
+  async verifyEmail(dto: VerifyEmailDto): Promise<MessageResponseEntity> {
     const storedOtp = await this.redis.get(`verify_email:${dto.email}`);
     if (!storedOtp || storedOtp !== dto.otp) {
       throw new BadRequestException('Invalid or expired OTP');
@@ -118,14 +149,14 @@ export class AuthService {
 
     await this.prisma.user.update({
       where: { email: dto.email },
-      data: { isVerified: true, verifiedAt: new Date() },
+      data: { isEmailVerified: true, emailVerifiedAt: new Date() },
     });
 
     await this.redis.del(`verify_email:${dto.email}`);
     return { message: 'Email verified successfully' };
   }
 
-  async forgotPassword(dto: ForgotPasswordDto) {
+  async forgotPassword(dto: ForgotPasswordDto): Promise<MessageResponseEntity> {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
@@ -149,27 +180,27 @@ export class AuthService {
     return { message: 'If email exists, OTP sent' };
   }
 
-  async resetPassword(dto: ResetPasswordDto) {
+  async resetPassword(dto: ResetPasswordDto): Promise<MessageResponseEntity> {
     const storedOtp = await this.redis.get(`reset_password:${dto.email}`);
     if (!storedOtp || storedOtp !== dto.otp) {
       throw new BadRequestException('Invalid or expired OTP');
     }
 
-    const salt = await bcrypt.genSalt();
-    const hash = await bcrypt.hash(dto.newPassword, salt);
+    const salt = (await genSalt()) as string;
+    const passwordHash = (await hash(dto.newPassword, salt)) as string;
 
     await this.prisma.user.update({
       where: { email: dto.email },
-      data: { password: hash },
+      data: { passwordHash },
     });
 
     await this.redis.del(`reset_password:${dto.email}`);
     return { message: 'Password reset successfully' };
   }
 
-  async refreshToken(dto: RefreshTokenDto) {
+  async refreshToken(dto: RefreshTokenDto): Promise<AuthTokensEntity> {
     try {
-      const payload = this.jwtService.verify(dto.refreshToken, {
+      const payload = this.jwtService.verify<JwtPayload>(dto.refreshToken, {
         secret: process.env.JWT_SECRET,
       });
       const user = await this.prisma.user.findUnique({
@@ -178,7 +209,7 @@ export class AuthService {
       if (!user) throw new UnauthorizedException('User not found');
 
       return this.login(user);
-    } catch (e) {
+    } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
   }

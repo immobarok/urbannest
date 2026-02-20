@@ -1,0 +1,81 @@
+// ============================================================
+// UrbanNest – Dispute, AdminAction, EmailLog
+// ============================================================
+
+// ─────────────────────────────────────────────
+// DISPUTES  (admin-managed only)
+// ─────────────────────────────────────────────
+
+model Dispute {
+  id            String @id @default(cuid())
+  bookingId     String @unique
+  complainantId String
+  respondentId  String
+
+  subject      String
+  description  String
+  evidenceUrls String[]
+
+  status       DisputeStatus @default(OPEN)
+  resolution   String?
+  refundAmount Decimal?      @db.Decimal(10, 2)
+
+  assignedAdminId String?
+  resolvedAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  booking     Booking @relation(fields: [bookingId], references: [id])
+  complainant User    @relation("ComplainantDisputes", fields: [complainantId], references: [id])
+  respondent  User    @relation("RespondentDisputes", fields: [respondentId], references: [id])
+
+  @@index([status])
+  @@index([complainantId])
+  @@index([respondentId])
+  @@map("disputes")
+}
+
+// ─────────────────────────────────────────────
+// ADMIN AUDIT LOG
+// ─────────────────────────────────────────────
+
+model AdminAction {
+  id         String  @id @default(cuid())
+  adminId    String
+  action     String // APPROVE_LISTING | REJECT_LISTING | VERIFY_USER | RESOLVE_DISPUTE | etc.
+  targetType String // Listing | User | Booking | Dispute
+  targetId   String
+  notes      String?
+  metadata   Json?
+
+  createdAt DateTime @default(now())
+
+  admin User @relation("AdminActions", fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([targetType, targetId])
+  @@map("admin_actions")
+}
+
+// ─────────────────────────────────────────────
+// EMAIL LOG
+// ─────────────────────────────────────────────
+
+model EmailLog {
+  id                String    @id @default(cuid())
+  recipientEmail    String
+  recipientId       String?
+  subject           String
+  template          String // booking_confirmation | reminder | cancellation | review_request | etc.
+  status            String // sent | failed | bounced
+  providerMessageId String?
+  sentAt            DateTime?
+  failureReason     String?
+  createdAt         DateTime  @default(now())
+
+  @@index([recipientId])
+  @@index([recipientEmail])
+  @@index([template, status])
+  @@map("email_logs")
+}

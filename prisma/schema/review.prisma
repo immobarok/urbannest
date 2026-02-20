@@ -1,0 +1,42 @@
+// ============================================================
+// UrbanNest – Review  (only after a completed booking)
+// ============================================================
+
+model Review {
+  id         String @id @default(cuid())
+  bookingId  String @unique
+  listingId  String
+  reviewerId String // author
+  revieweeId String // subject (host or guest)
+
+  // Overall star rating 1-5
+  rating Float
+
+  // Detailed sub-ratings (guest → listing review only)
+  cleanlinessRating   Float?
+  communicationRating Float?
+  checkInRating       Float?
+  accuracyRating      Float?
+  locationRating      Float?
+  valueRating         Float?
+
+  comment  String
+  isPublic Boolean @default(true)
+
+  // Host response
+  hostResponse   String?
+  hostResponseAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  booking  Booking @relation(fields: [bookingId], references: [id])
+  listing  Listing @relation(fields: [listingId], references: [id])
+  reviewer User    @relation("ReviewsGiven", fields: [reviewerId], references: [id])
+  reviewee User    @relation("ReviewsReceived", fields: [revieweeId], references: [id])
+
+  @@index([listingId])
+  @@index([reviewerId])
+  @@index([revieweeId])
+  @@map("reviews")
+}

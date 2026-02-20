@@ -1,0 +1,139 @@
+// ============================================================
+// UrbanNest – Listing, ListingPhoto, Amenity, ListingAmenity, HouseRule
+// ============================================================
+
+model Listing {
+  id           String        @id @default(cuid())
+  hostId       String
+  title        String
+  description  String
+  propertyType PropertyType
+  status       ListingStatus @default(DRAFT)
+
+  // Location
+  address   String
+  city      String
+  state     String
+  country   String
+  zipCode   String
+  latitude  Float?
+  longitude Float?
+
+  // Capacity
+  maxGuests Int
+  bedrooms  Int
+  bathrooms Float // supports 1.5, 2.5, etc.
+  beds      Int
+
+  // Base pricing
+  basePrice         Decimal  @db.Decimal(10, 2)
+  cleaningFee       Decimal? @db.Decimal(10, 2)
+  serviceFeePercent Float    @default(12.0) // platform fee %
+  securityDeposit   Decimal? @db.Decimal(10, 2)
+
+  // Stay limits
+  minNights Int  @default(1)
+  maxNights Int?
+
+  // Booking policy
+  cancellationPolicy CancellationPolicyType @default(MODERATE)
+  instantBook        Boolean                @default(false)
+
+  // SEO
+  slug            String  @unique
+  metaTitle       String?
+  metaDescription String?
+
+  // Admin approval
+  approvedById    String?
+  approvedAt      DateTime?
+  rejectionReason String?
+
+  // Cached aggregate rating (updated after each review)
+  averageRating Float?
+  reviewCount   Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  host           User             @relation(fields: [hostId], references: [id])
+  photos         ListingPhoto[]
+  amenities      ListingAmenity[]
+  houseRules     HouseRule[]
+  availabilities Availability[]
+  pricingRules   PricingRule[]
+  bookings       Booking[]
+  reviews        Review[]
+  favorites      Favorite[]
+
+  @@index([hostId])
+  @@index([status])
+  @@index([city, country])
+  @@index([basePrice])
+  @@index([latitude, longitude])
+  @@index([slug])
+  @@index([propertyType])
+  @@map("listings")
+}
+
+// ─────────────────────────────────────────────
+// LISTING PHOTOS
+// ─────────────────────────────────────────────
+
+model ListingPhoto {
+  id        String   @id @default(cuid())
+  listingId String
+  url       String
+  caption   String?
+  isCover   Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+  @@map("listing_photos")
+}
+
+// ─────────────────────────────────────────────
+// AMENITIES
+// ─────────────────────────────────────────────
+
+model Amenity {
+  id       String  @id @default(cuid())
+  name     String  @unique
+  icon     String? // icon name / URL
+  category String // Kitchen | Bathroom | Safety | Entertainment | Outdoor | etc.
+
+  listings ListingAmenity[]
+
+  @@map("amenities")
+}
+
+model ListingAmenity {
+  listingId String
+  amenityId String
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  amenity Amenity @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
+  @@id([listingId, amenityId])
+  @@map("listing_amenities")
+}
+
+// ─────────────────────────────────────────────
+// HOUSE RULES
+// ─────────────────────────────────────────────
+
+model HouseRule {
+  id        String @id @default(cuid())
+  listingId String
+  rule      String
+  sortOrder Int    @default(0)
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+  @@map("house_rules")
+}

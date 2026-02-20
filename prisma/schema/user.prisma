@@ -1,0 +1,112 @@
+// ============================================================
+// UrbanNest – User, UserProfile, VerificationDocument
+// ============================================================
+
+model User {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  phone        String?
+  avatarUrl    String?
+  role         Role    @default(GUEST)
+
+  // Account state
+  isActive Boolean @default(true)
+
+  // Email verification
+  isEmailVerified  Boolean   @default(false)
+  emailVerifiedAt  DateTime?
+  emailVerifyToken String?   @unique
+
+  // Phone verification
+  isPhoneVerified Boolean @default(false)
+
+  // Identity / Host badges
+  isIdentityVerified Boolean @default(false)
+  isHostVerified     Boolean @default(false)
+
+  // Password reset
+  resetPasswordToken   String?   @unique
+  resetPasswordExpires DateTime?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
+
+  // Relations
+  profile                  UserProfile?
+  listings                 Listing[]
+  bookingsAsGuest          Booking[]                 @relation("GuestBookings")
+  reviewsGiven             Review[]                  @relation("ReviewsGiven")
+  reviewsReceived          Review[]                  @relation("ReviewsReceived")
+  sentMessages             Message[]                 @relation("SentMessages")
+  conversationParticipants ConversationParticipant[]
+  favorites                Favorite[]
+  notifications            Notification[]
+  verificationDocuments    VerificationDocument[]
+  paymentMethods           PaymentMethod[]
+  adminActions             AdminAction[]             @relation("AdminActions")
+  disputesAsComplainant    Dispute[]                 @relation("ComplainantDisputes")
+  disputesAsRespondent     Dispute[]                 @relation("RespondentDisputes")
+
+  @@index([email])
+  @@index([role])
+  @@index([isActive])
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────
+// USER PROFILE
+// ─────────────────────────────────────────────
+
+model UserProfile {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  bio         String?
+  dateOfBirth DateTime?
+
+  // Address
+  address String?
+  city    String?
+  state   String?
+  country String?
+  zipCode String?
+
+  // Host stats (computed/cached)
+  languages    String[]
+  responseRate Float? // percentage 0-100
+  responseTime String? // e.g. "within an hour"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+// ─────────────────────────────────────────────
+// IDENTITY VERIFICATION
+// ─────────────────────────────────────────────
+
+model VerificationDocument {
+  id              String             @id @default(cuid())
+  userId          String
+  documentType    String // passport | driver_license | national_id
+  documentUrl     String
+  backDocumentUrl String?
+  selfieUrl       String?
+  status          VerificationStatus @default(PENDING)
+  reviewedById    String?
+  reviewNotes     String?
+  submittedAt     DateTime           @default(now())
+  reviewedAt      DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("verification_documents")
+}

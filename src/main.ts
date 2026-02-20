@@ -18,7 +18,7 @@ async function bootstrap() {
 
   // ── Global Prefix ──────────────────────────────────────────
   app.setGlobalPrefix('api', {
-    exclude: ['/', 'health'],
+    exclude: [],
   });
 
   // ── API Versioning ─────────────────────────────────────────
@@ -63,7 +63,9 @@ async function bootstrap() {
   app.enableShutdownHooks();
 
   // ── Trust Proxy (for correct IP behind load-balancers) ─────
-  const expressApp = app.getHttpAdapter().getInstance();
+  const expressApp = app
+    .getHttpAdapter()
+    .getInstance() as import('express').Express;
   expressApp.set('trust proxy', 1);
 
   // ── Body Size Limits ───────────────────────────────────────

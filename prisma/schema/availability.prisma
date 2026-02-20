@@ -1,0 +1,42 @@
+// ============================================================
+// UrbanNest – Availability Calendar & Dynamic Pricing Rules
+// ============================================================
+
+// ─────────────────────────────────────────────
+// AVAILABILITY CALENDAR
+// Each row = one date that the host has blocked or opened.
+// Absence of a row = available by default.
+// ─────────────────────────────────────────────
+
+model Availability {
+  id          String   @id @default(cuid())
+  listingId   String
+  date        DateTime @db.Date
+  isAvailable Boolean  @default(false) // true = explicitly opened; false = blocked
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, date])
+  @@index([listingId, date])
+  @@map("availabilities")
+}
+
+// ─────────────────────────────────────────────
+// DYNAMIC PRICING RULES
+// ─────────────────────────────────────────────
+
+model PricingRule {
+  id            String    @id @default(cuid())
+  listingId     String
+  name          String // e.g. "Weekend Surcharge", "Early Bird Discount"
+  startDate     DateTime? @db.Date
+  endDate       DateTime? @db.Date
+  dayOfWeek     Int? // 0 = Sunday … 6 = Saturday; null = applies every day
+  priceModifier Float // 1.25 = +25 %;  0.80 = −20 %
+  isActive      Boolean   @default(true)
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+  @@map("pricing_rules")
+}

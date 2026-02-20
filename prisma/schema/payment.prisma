@@ -1,0 +1,79 @@
+// ============================================================
+// UrbanNest – Payment, Refund, PaymentMethod
+// ============================================================
+
+model Payment {
+  id        String          @id @default(cuid())
+  bookingId String
+  amount    Decimal         @db.Decimal(10, 2)
+  currency  String          @default("USD")
+  status    PaymentStatus   @default(PENDING)
+  provider  PaymentProvider
+
+  // Provider IDs for webhook reconciliation
+  providerPaymentId String? // Stripe PaymentIntent ID / PayPal Order ID
+  providerChargeId  String?
+
+  paymentMethodId String?
+  paidAt          DateTime?
+  failureReason   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  booking Booking  @relation(fields: [bookingId], references: [id])
+  refunds Refund[]
+
+  @@index([bookingId])
+  @@index([status])
+  @@index([providerPaymentId])
+  @@map("payments")
+}
+
+// ─────────────────────────────────────────────
+// REFUNDS
+// ─────────────────────────────────────────────
+
+model Refund {
+  id               String        @id @default(cuid())
+  paymentId        String
+  amount           Decimal       @db.Decimal(10, 2)
+  reason           String
+  status           PaymentStatus @default(PENDING)
+  providerRefundId String?
+
+  // Admin who processed the refund
+  processedById String?
+  processedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  payment Payment @relation(fields: [paymentId], references: [id])
+
+  @@index([paymentId])
+  @@map("refunds")
+}
+
+// ─────────────────────────────────────────────
+// PAYMENT METHODS
+// ─────────────────────────────────────────────
+
+model PaymentMethod {
+  id               String          @id @default(cuid())
+  userId           String
+  provider         PaymentProvider
+  providerMethodId String // Stripe PM ID / PayPal billing agreement
+  type             String // card | paypal | bank_transfer
+  last4            String?
+  brand            String? // visa | mastercard | amex
+  expiryMonth      Int?
+  expiryYear       Int?
+  isDefault        Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("payment_methods")
+}

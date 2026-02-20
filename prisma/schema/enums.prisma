@@ -1,0 +1,94 @@
+// ============================================================
+// UrbanNest – Enums
+// ============================================================
+
+enum Role {
+  GUEST
+  HOST
+  ADMIN
+}
+
+enum ListingStatus {
+  DRAFT // Host still editing
+  PENDING_APPROVAL // Submitted, awaiting admin review
+  ACTIVE // Live and bookable
+  INACTIVE // Host deactivated
+  REJECTED // Admin rejected
+  SUSPENDED // Admin suspended
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  VILLA
+  CABIN
+  CONDO
+  STUDIO
+  TOWNHOUSE
+  COTTAGE
+  LOFT
+  OTHER
+}
+
+enum BookingStatus {
+  PENDING // Guest requested, awaiting host confirmation
+  CONFIRMED // Host confirmed
+  CANCELLED // Cancelled by guest or host
+  COMPLETED // Stay finished
+  REJECTED // Host rejected the request
+  NO_SHOW // Guest did not show up
+}
+
+enum CancellationPolicyType {
+  FLEXIBLE // Full refund if cancelled 24 h before check-in
+  MODERATE // Full refund if cancelled 5 days before check-in
+  STRICT // 50 % refund if cancelled at least 1 week before
+  SUPER_STRICT // No refund
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentProvider {
+  STRIPE
+  PAYPAL
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  CLOSED
+}
+
+enum NotificationType {
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
+  BOOKING_REJECTED
+  BOOKING_REMINDER_CHECKIN
+  BOOKING_REMINDER_CHECKOUT
+  PAYMENT_RECEIVED
+  PAYMENT_REFUNDED
+  REVIEW_REQUEST
+  NEW_MESSAGE
+  LISTING_APPROVED
+  LISTING_REJECTED
+  LISTING_SUSPENDED
+  IDENTITY_VERIFIED
+  IDENTITY_REJECTED
+  DISPUTE_OPENED
+  DISPUTE_RESOLVED
+}
