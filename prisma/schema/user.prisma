@@ -50,6 +50,7 @@ model User {
   adminActions             AdminAction[]             @relation("AdminActions")
   disputesAsComplainant    Dispute[]                 @relation("ComplainantDisputes")
   disputesAsRespondent     Dispute[]                 @relation("RespondentDisputes")
+  media                    Media[]
 
   @@index([email])
   @@index([role])

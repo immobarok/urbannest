@@ -1,0 +1,24 @@
+// ============================================================
+// UrbanNest – Media (Image uploads stored in MinIO / S3)
+// ============================================================
+
+model Media {
+  id           String @id @default(cuid())
+  uploaderId   String
+
+  filename     String   // object key in the bucket
+  originalName String   // user's original filename
+  mimeType     String   // e.g. image/jpeg, image/png
+  size         Int      // bytes
+  bucket       String   // MinIO bucket name
+  url          String   // public / pre-signed URL
+  alt          String?  // alt text / caption
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  uploader User @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+
+  @@index([uploaderId])
+  @@map("media")
+}
