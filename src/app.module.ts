@@ -27,6 +27,7 @@ import { MinioModule } from './minio/minio.module';
 import { ListingModule } from './listing/listing.module';
 import { BrandsModule } from './brands/brands.module';
 import { FaqsModule } from './faqs/faqs.module';
+import { HowitworksModule } from './howitworks/howitworks.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { FaqsModule } from './faqs/faqs.module';
     ListingModule,
     BrandsModule,
     FaqsModule,
+    HowitworksModule,
   ],
   controllers: [AppController],
   providers: [
