@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { CreateFaqDto, CreateFaqSectionDto } from './dto/create-faq.dto';
 import { UpdateFaqDto, UpdateFaqSectionDto } from './dto/update-faq.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -107,8 +107,22 @@ export class FaqsService {
 
   async removeFaq(id: string) {
     this.logger.log(`Removing FAQ with ID: ${id}`);
-    return await this.prisma.faq.delete({
+
+    const faq = await this.prisma.faq.findUnique({
       where: { id },
+    });
+
+    if (!faq) {
+      throw new NotFoundException(`FAQ with ID ${id} not found`);
+    }
+
+    return this.prisma.faq.delete({
+      where: { id },
+      select: {
+        id: true,
+        question: true,
+        answer: true,
+      },
     });
   }
 }
