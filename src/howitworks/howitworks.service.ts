@@ -193,29 +193,24 @@ export class HowitworksService {
   async createStep(dto: CreateHowitworkStepDto, file?: Express.Multer.File) {
     this.logger.log(`Creating HowItWorks Step: ${dto.title}`);
 
+    // 1. Upload Icon first (if any)
     const icon = file ? await this.uploadIcon(file) : dto.icon;
 
-    // Verify section exists
-    let sectionId = dto.sectionId;
-    if (!sectionId) {
-      const section = await this.prisma.howItWorksSection.findFirst();
-      if (!section) {
-        throw new NotFoundException(
-          'No HowItWorks section exists. Create one first.',
-        );
-      }
-      sectionId = section.id;
-    } else {
-      const section = await this.prisma.howItWorksSection.findUnique({
-        where: { id: sectionId },
+    // 2. Find ANY existing section (Singleton approach)
+    let section = await this.prisma.howItWorksSection.findFirst();
+
+    // 3. Auto-create section if missing
+    if (!section) {
+      section = await this.prisma.howItWorksSection.create({
+        data: {
+          title: 'How It Works', // Default title
+          isActive: true,
+        },
       });
-      if (!section) {
-        throw new NotFoundException(
-          `HowItWorks Section "${sectionId}" not found`,
-        );
-      }
+      this.logger.log(`Auto-created default HowItWorks Section: ${section.id}`);
     }
 
+    // 4. Create Step linked to that section
     return this.prisma.howItWorksStep.create({
       data: {
         title: dto.title,
@@ -223,7 +218,7 @@ export class HowitworksService {
         icon,
         order: dto.order ?? 0,
         isActive: dto.isActive ?? true,
-        sectionId,
+        sectionId: section.id, // <--- Auto-assigned!
       },
     });
   }

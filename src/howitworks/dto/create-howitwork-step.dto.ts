@@ -31,6 +31,7 @@ export class CreateHowitworkStepDto {
   @IsBoolean()
   isActive?: boolean;
 
+  @IsOptional()
   @IsNotEmpty()
   @IsUUID()
   sectionId!: string;
