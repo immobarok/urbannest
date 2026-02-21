@@ -3,13 +3,12 @@ import {
   IsString,
   IsOptional,
   IsBoolean,
-  IsArray,
-  ValidateNested,
+  IsInt,
+  IsUUID,
   MaxLength,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 
-export class CreateStepInSectionDto {
+export class CreateHowitworkStepDto {
   @IsNotEmpty()
   @IsString()
   @MaxLength(255)
@@ -25,26 +24,14 @@ export class CreateStepInSectionDto {
   icon?: string;
 
   @IsOptional()
+  @IsInt()
   order?: number;
 
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
-}
 
-export class CreateHowitworkSectionDto {
   @IsNotEmpty()
-  @IsString()
-  @MaxLength(255)
-  title!: string;
-
-  @IsOptional()
-  @IsBoolean()
-  isActive?: boolean;
-
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CreateStepInSectionDto)
-  steps?: CreateStepInSectionDto[];
+  @IsUUID()
+  sectionId!: string;
 }
