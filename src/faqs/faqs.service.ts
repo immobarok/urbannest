@@ -34,22 +34,36 @@ export class FaqsService {
 
   async createFaq(createFaqDto: CreateFaqDto) {
     this.logger.log(`Creating FAQ with data: ${JSON.stringify(createFaqDto)}`);
-    if (!createFaqDto.faqsectionId) {
-      throw new Error('faqsectionId is required to create a FAQ');
+    let sectionId = createFaqDto.faqsectionId;
+    if (!sectionId) {
+      const existingSection = await this.prisma.faqsection.findFirst();
+      if (!existingSection) {
+        throw new Error(
+          'No FAQ section exists. Please create a section first.',
+        );
+      }
+      sectionId = existingSection.id;
     }
+
     return await this.prisma.faq.create({
       data: {
         question: createFaqDto.question,
         answer: createFaqDto.answer,
         isActive: createFaqDto.isActive ?? true,
-        faqsectionId: createFaqDto.faqsectionId,
+        faqsectionId: sectionId,
       },
     });
   }
   async findAll() {
-    return await this.prisma.faqsection.findFirst({
+    return await this.prisma.faqsection.findMany({
       include: {
-        faqs: true,
+        faqs: {
+          select: {
+            id: true,
+            question: true,
+            answer: true,
+          },
+        },
       },
     });
   }
