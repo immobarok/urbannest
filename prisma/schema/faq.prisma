@@ -1,0 +1,20 @@
+model faqsection {
+  id        String   @id @default(uuid())
+  title     String
+  isActive  Boolean  @default(true)
+  faqs      faq[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model faq {
+  id           String     @id @default(uuid())
+  question     String
+  answer       String
+  isActive     Boolean    @default(true)
+  faqsectionId String
+  faqsection   faqsection @relation(fields: [faqsectionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+

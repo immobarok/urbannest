@@ -26,6 +26,7 @@ import { MediaModule } from './media/media.module';
 import { MinioModule } from './minio/minio.module';
 import { ListingModule } from './listing/listing.module';
 import { BrandsModule } from './brands/brands.module';
+import { FaqsModule } from './faqs/faqs.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { BrandsModule } from './brands/brands.module';
     MediaModule,
     ListingModule,
     BrandsModule,
+    FaqsModule,
   ],
   controllers: [AppController],
   providers: [
