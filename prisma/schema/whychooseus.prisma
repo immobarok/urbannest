@@ -1,0 +1,26 @@
+model WhyChooseSection {
+  id              Int             @id @default(autoincrement())
+  header          String
+  headerHighlight String?
+  subHeader       String?
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  cards           WhyChooseCard[]
+}
+
+model WhyChooseCard {
+  id          Int              @id @default(autoincrement())
+  title       String
+  description String?
+  iconUrl     String?
+  iconAlt     String?
+  sortOrder   Int              @default(0)
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  sectionId   Int
+  section     WhyChooseSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+}
