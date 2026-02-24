@@ -1,0 +1,27 @@
+model Blog{
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String   @db.Text
+  author    String
+  readTime  Int
+  isPublished Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  images BlogImage[]
+
+  @@map("blogs")
+}
+
+model BlogImage {
+  id        Int      @id @default(autoincrement())
+  blogId    Int
+  url       String
+  caption   String?
+  createdAt DateTime @default(now())
+
+  blog Blog @relation(fields: [blogId], references: [id], onDelete: Cascade)
+
+  @@index([blogId])
+  @@map("blog_images")
+}
