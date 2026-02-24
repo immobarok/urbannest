@@ -2,10 +2,13 @@ import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post } from "@nestjs
 import { ContactService } from "./contact.service";
 import { CreateContactDto } from "./dto/create-contact.dto";
 import { UpdateStatusDto } from "./dto/update-status.dto";
+import { Public } from "../common/decorators/public.decorator";
 
 @Controller("contact")
 export class ContactController {
 	constructor(private readonly contactService: ContactService) {}
+
+	@Public()
 	@Post()
 	async create(@Body() body: CreateContactDto) {
 		return this.contactService.create(body);
