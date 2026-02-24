@@ -1,0 +1,14 @@
+model ContactMessage {
+  id        Int      @id @default(autoincrement())
+  fullName  String
+  email     String
+  subject   String
+  message   String   @db.Text
+  category  String?
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("contact_messages")
+}
+
