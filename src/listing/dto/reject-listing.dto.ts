@@ -1,8 +1,8 @@
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsString, MaxLength } from "class-validator";
 
 export class RejectListingDto {
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(1000)
-  reason!: string;
+	@IsString()
+	@IsNotEmpty()
+	@MaxLength(1000)
+	reason!: string;
 }

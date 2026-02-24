@@ -1,18 +1,18 @@
-import { HowItWorksStepEntity } from './HowItWorksStep.entity';
+import { HowItWorksStepEntity } from "./HowItWorksStep.entity";
 
 export class HowItWorksSectionEntity {
-  id!: string;
-  title!: string;
-  isActive!: boolean;
-  createdAt!: Date;
-  updatedAt!: Date;
-  steps?: HowItWorksStepEntity[];
+	id!: string;
+	title!: string;
+	isActive!: boolean;
+	createdAt!: Date;
+	updatedAt!: Date;
+	steps?: HowItWorksStepEntity[];
 
-  constructor(partial: Partial<HowItWorksSectionEntity>) {
-    Object.assign(this, partial);
+	constructor(partial: Partial<HowItWorksSectionEntity>) {
+		Object.assign(this, partial);
 
-    if (partial.steps) {
-      this.steps = partial.steps.map((step) => new HowItWorksStepEntity(step));
-    }
-  }
+		if (partial.steps) {
+			this.steps = partial.steps.map((step) => new HowItWorksStepEntity(step));
+		}
+	}
 }

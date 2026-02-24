@@ -26,6 +26,7 @@ import { BrandsModule } from "./brands/brands.module";
 import { FaqsModule } from "./faqs/faqs.module";
 import { HowitworksModule } from "./howitworks/howitworks.module";
 import { ContactModule } from "./contact/contact.module";
+import { BlogModule } from "./blog/blog.module";
 
 @Module({
 	imports: [
@@ -41,6 +42,7 @@ import { ContactModule } from "./contact/contact.module";
 		FaqsModule,
 		HowitworksModule,
 		ContactModule,
+		BlogModule,
 	],
 	controllers: [AppController],
 	providers: [
