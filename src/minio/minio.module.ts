@@ -1,9 +1,9 @@
-import { Global, Module } from '@nestjs/common';
-import { MinioService } from './minio.service';
+import { Global, Module } from "@nestjs/common";
+import { MinioService } from "./minio.service";
 
 @Global()
 @Module({
-  providers: [MinioService],
-  exports: [MinioService],
+	providers: [MinioService],
+	exports: [MinioService],
 })
 export class MinioModule {}
