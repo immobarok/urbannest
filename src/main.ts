@@ -7,6 +7,7 @@ import { HttpExceptionFilter, AllExceptionsFilter } from "./common/filter";
 async function bootstrap() {
 	// ── Create Application ─────────────────────────────────────
 	const app = await NestFactory.create(AppModule, {
+		rawBody: true,
 		logger:
 			process.env.NODE_ENV === "production"
 				? ["error", "warn", "log"]

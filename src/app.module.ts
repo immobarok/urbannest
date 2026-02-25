@@ -28,6 +28,7 @@ import { HowitworksModule } from "./howitworks/howitworks.module";
 import { ContactModule } from "./contact/contact.module";
 import { BlogModule } from "./blog/blog.module";
 import { BookingModule } from "./booking/booking.module";
+import { PaymentModule } from "./payment/payment.module";
 
 @Module({
 	imports: [
@@ -45,6 +46,7 @@ import { BookingModule } from "./booking/booking.module";
 		ContactModule,
 		BlogModule,
 		BookingModule,
+		PaymentModule,
 	],
 	controllers: [AppController],
 	providers: [

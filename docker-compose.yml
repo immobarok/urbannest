@@ -125,6 +125,24 @@ services:
         max-size: '5m'
         max-file: '2'
 
+  # ---------------------------------------------------------------------------
+  # Stripe CLI – Webhook Forwarding
+  # ---------------------------------------------------------------------------
+  stripe:
+    image: stripe/stripe-cli:latest
+    container_name: nest_stripe_cli
+    command: listen --forward-to http://host.docker.internal:3000/api/v1/payments/webhook --api-key ${STRIPE_SECRET_KEY}
+    networks:
+      - nest_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: '5m'
+        max-file: '2'
+
 # =============================================================================
 networks:
   nest_network:
