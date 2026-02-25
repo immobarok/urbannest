@@ -70,7 +70,15 @@ async function bootstrap() {
 	// ── Body Size Limits ───────────────────────────────────────
 	const bodyLimit = configService.get<string>("BODY_LIMIT", "10mb");
 	const { json, urlencoded } = await import("express");
-	app.use(json({ limit: bodyLimit }));
+	app.use(
+		json({
+			limit: bodyLimit,
+			verify: (req: any, _res, buf) => {
+				// Preserve the raw body for Stripe webhook signature verification
+				req.rawBody = buf;
+			},
+		}),
+	);
 	app.use(urlencoded({ extended: true, limit: bodyLimit }));
 
 	// ── Start Server ───────────────────────────────────────────

@@ -26,25 +26,23 @@ export class PaymentController {
 			throw new BadRequestException("Missing stripe-signature header");
 		}
 
-		// In a real production app, ensure raw body is passed.
-		// For this implementation, we will pass req.body directly as Buffer,
-		// assuming specific middleware configuration for this route.
-		// If specific middleware is not set up, req.body might be JSON object, causing verification failure.
-
-		// For now, let's assume raw body is available on `req.rawBody` (custom property often added)
-		// or `req.body` if unparsed.
-		// But standard Express `req` doesn't have `rawBody`.
-
-		// Let's rely on PaymentService logic.
-		// We'll pass req.body, but cast it to Buffer.
-		// If parsed, JSON.stringify(req.body) might work but order of keys matters for signature.
-		// Recommendation: Use raw-body middleware for this route.
-
-		// As a placeholder, let's assume `req['rawBody']` exists if middleware configured.
+		// Access the raw buffer provided by NestJS (because rawBody: true is set in main.ts)
 		const rawBody = (req as unknown as Record<string, unknown>).rawBody;
-		const payload: Buffer =
-			(typeof rawBody === "string" ? Buffer.from(rawBody) : (rawBody as Buffer)) ||
-			(req.body as Buffer);
+
+		// Ensure payload is a Buffer
+		let payload: Buffer;
+		if (Buffer.isBuffer(rawBody)) {
+			payload = rawBody;
+		} else if (typeof rawBody === "string") {
+			payload = Buffer.from(rawBody);
+		} else if (rawBody && typeof rawBody === "object") {
+			payload = Buffer.from(JSON.stringify(rawBody));
+		} else {
+			// Fallback: This will likely fail signature verification but prevents the "object" error
+			// The issue is likely that rawBody is undefined, so req.body (parsed JSON) is being used incorrectly later
+			// But here we enforce Buffer return.
+			payload = Buffer.from("");
+		}
 
 		return this.paymentService.handleWebhook(signature, payload);
 	}
