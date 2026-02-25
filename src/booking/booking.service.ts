@@ -14,7 +14,26 @@ export class BookingService {
 	constructor(private readonly prisma: PrismaService) {}
 
 	async create(userId: string, createBookingDto: CreateBookingDto) {
-		const { listingId, checkIn, checkOut, guestCount, guestNote } = createBookingDto;
+		const {
+			listingId,
+			checkIn,
+			checkOut,
+			guestCount,
+			firstName,
+			lastName,
+			email,
+			phone,
+			dob,
+			gender,
+			nationality,
+			university,
+			description,
+			termsAccepted,
+		} = createBookingDto;
+
+		if (!termsAccepted) {
+			throw new BadRequestException("You must accept the terms and conditions");
+		}
 
 		// 1. Fetch Listing
 		const listing = await this.prisma.listing.findUnique({
@@ -89,7 +108,15 @@ export class BookingService {
 				securityDeposit: new Prisma.Decimal(securityDeposit),
 				totalAmount: new Prisma.Decimal(totalAmount),
 				hostPayout: new Prisma.Decimal(hostPayout),
-				guestNote,
+				firstName,
+				lastName,
+				email,
+				phone,
+				dob,
+				gender,
+				nationality,
+				university,
+				guestNote: description,
 				confirmedAt: listing.instantBook ? new Date() : null,
 			},
 			include: {
@@ -249,5 +276,31 @@ export class BookingService {
 				cancellationReason: cancelDto.reason,
 			},
 		});
+	}
+
+	async getUnavailableDates(listingId: string) {
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+
+		const bookings = await this.prisma.booking.findMany({
+			where: {
+				listingId,
+				status: {
+					in: [BookingStatus.CONFIRMED, BookingStatus.PENDING],
+				},
+				checkOut: {
+					gte: today,
+				},
+			},
+			select: {
+				checkIn: true,
+				checkOut: true,
+			},
+		});
+
+		return bookings.map((booking) => ({
+			checkIn: booking.checkIn,
+			checkOut: booking.checkOut,
+		}));
 	}
 }

@@ -29,4 +29,12 @@ export class BookingEntity implements Booking {
 	constructor(partial: Partial<BookingEntity>) {
 		Object.assign(this, partial);
 	}
+	firstName!: string | null;
+	lastName!: string | null;
+	email!: string | null;
+	phone!: string | null;
+	dob!: Date | null;
+	gender!: string | null;
+	nationality!: string | null;
+	university!: string | null;
 }

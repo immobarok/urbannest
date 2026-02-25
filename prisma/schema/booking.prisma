@@ -12,6 +12,16 @@ model Booking {
   nights     Int
   guestCount Int
 
+  // Guest Contact Info for this Booking
+  firstName   String?
+  lastName    String?
+  email       String?
+  phone       String?
+  dob         DateTime?
+  gender      String?
+  nationality String?
+  university  String?
+
   status BookingStatus @default(PENDING)
 
   // Price snapshot at time of booking

@@ -6,10 +6,18 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import type { User } from "@prisma/client";
 
+import { Public } from "../common/decorators/public.decorator";
+
 @Controller("bookings")
 @UseGuards(JwtAuthGuard)
 export class BookingController {
 	constructor(private readonly bookingService: BookingService) {}
+
+	@Public()
+	@Get("availability/:listingId")
+	getUnavailableDates(@Param("listingId") listingId: string) {
+		return this.bookingService.getUnavailableDates(listingId);
+	}
 
 	@Post()
 	create(@CurrentUser() user: User, @Body() createBookingDto: CreateBookingDto) {

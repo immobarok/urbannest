@@ -1,5 +1,14 @@
 import { Type } from "class-transformer";
-import { IsDate, IsInt, IsNotEmpty, IsOptional, IsString, Min } from "class-validator";
+import {
+	IsBoolean,
+	IsDate,
+	IsEmail,
+	IsInt,
+	IsNotEmpty,
+	IsOptional,
+	IsString,
+	Min,
+} from "class-validator";
 
 export class CreateBookingDto {
 	@IsString()
@@ -21,6 +30,43 @@ export class CreateBookingDto {
 	guestCount!: number;
 
 	@IsString()
+	@IsNotEmpty()
+	firstName!: string;
+
+	@IsString()
+	@IsNotEmpty()
+	lastName!: string;
+
+	@IsEmail()
+	@IsNotEmpty()
+	email!: string;
+
+	@IsString()
+	@IsNotEmpty()
+	phone!: string;
+
+	@IsDate()
+	@Type(() => Date)
 	@IsOptional()
-	guestNote?: string;
+	dob?: Date;
+
+	@IsString()
+	@IsOptional()
+	gender?: string;
+
+	@IsString()
+	@IsOptional()
+	nationality?: string;
+
+	@IsString()
+	@IsOptional()
+	university?: string;
+
+	@IsString()
+	@IsOptional()
+	description?: string;
+
+	@IsBoolean()
+	@IsNotEmpty()
+	termsAccepted!: boolean;
 }
