@@ -1,4 +1,4 @@
-import { SetMetadata } from '@nestjs/common';
+import { SetMetadata } from "@nestjs/common";
 
 /**
  * Enum of well-known application roles.
@@ -7,11 +7,12 @@ import { SetMetadata } from '@nestjs/common';
  * prevents typos and enables IDE auto-complete.
  */
 export enum Role {
-  SUPER_ADMIN = 'SUPER_ADMIN',
-  ADMIN = 'ADMIN',
-  MODERATOR = 'MODERATOR',
-  USER = 'USER',
-  VIEWER = 'VIEWER',
+	SUPER_ADMIN = "SUPER_ADMIN",
+	ADMIN = "ADMIN",
+	HOST = "HOST",
+	MODERATOR = "MODERATOR",
+	USER = "USER",
+	VIEWER = "VIEWER",
 }
 
 /**
@@ -28,7 +29,7 @@ export enum Role {
  * return requiredRoles.some((role) => user.roles.includes(role));
  * ```
  */
-export const ROLES_KEY = 'roles';
+export const ROLES_KEY = "roles";
 
 /**
  * Restricts access to a route or controller to users that hold **at least one**

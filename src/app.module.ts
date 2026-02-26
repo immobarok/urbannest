@@ -30,6 +30,7 @@ import { BlogModule } from "./blog/blog.module";
 import { BookingModule } from "./booking/booking.module";
 import { PaymentModule } from "./payment/payment.module";
 import { ChatModule } from "./chat/chat.module";
+import { DashboardModule } from "./dashboard/dashboard.module";
 
 @Module({
 	imports: [
@@ -49,6 +50,7 @@ import { ChatModule } from "./chat/chat.module";
 		BookingModule,
 		PaymentModule,
 		ChatModule,
+		DashboardModule,
 	],
 	controllers: [AppController],
 	providers: [
