@@ -228,7 +228,8 @@ export class ListingService {
 	// ══════════════════════════════════════════════════════
 
 	async findMyListings(hostId: string, query: ListingQueryDto): Promise<ListingListEntity> {
-		const where: Prisma.ListingWhereInput = { hostId };
+		const where = this.buildListingWhere(query);
+		where.hostId = hostId;
 		if (query.status) where.status = query.status;
 
 		return this.findListingsWithPagination(where, query);
@@ -239,28 +240,8 @@ export class ListingService {
 	// ══════════════════════════════════════════════════════
 
 	async findPublicListings(query: ListingQueryDto): Promise<ListingListEntity> {
-		const where: Prisma.ListingWhereInput = {
-			status: ListingStatus.ACTIVE,
-		};
-
-		if (query.search) {
-			where.OR = [
-				{ title: { contains: query.search, mode: "insensitive" } },
-				{ description: { contains: query.search, mode: "insensitive" } },
-				{ city: { contains: query.search, mode: "insensitive" } },
-			];
-		}
-		if (query.city) where.city = { contains: query.city, mode: "insensitive" };
-		if (query.country) where.country = { contains: query.country, mode: "insensitive" };
-		if (query.propertyType) where.propertyType = query.propertyType;
-		if (query.guests) where.maxGuests = { gte: query.guests };
-		if (query.bedrooms) where.bedrooms = { gte: query.bedrooms };
-		if (query.bathrooms) where.bathrooms = { gte: query.bathrooms };
-		if (query.minPrice || query.maxPrice) {
-			where.basePrice = {};
-			if (query.minPrice) (where.basePrice as any).gte = query.minPrice;
-			if (query.maxPrice) (where.basePrice as any).lte = query.maxPrice;
-		}
+		const where = this.buildListingWhere(query);
+		where.status = ListingStatus.ACTIVE;
 
 		return this.findListingsWithPagination(where, query);
 	}
@@ -278,6 +259,17 @@ export class ListingService {
 			throw new NotFoundException(`Listing "${id}" not found.`);
 		}
 		return listing as unknown as ListingEntity;
+	}
+
+	/** Find all unique cities with active listings. */
+	async findCities(): Promise<string[]> {
+		const cities = await this.prisma.listing.findMany({
+			where: { status: ListingStatus.ACTIVE },
+			select: { city: true },
+			distinct: ["city"],
+			orderBy: { city: "asc" },
+		});
+		return cities.map((c) => c.city);
 	}
 
 	/** Find a listing by its slug (public). */
@@ -356,14 +348,8 @@ export class ListingService {
 	// ══════════════════════════════════════════════════════
 
 	async findAllAdmin(query: ListingQueryDto): Promise<ListingListEntity> {
-		const where: Prisma.ListingWhereInput = {};
+		const where = this.buildListingWhere(query);
 		if (query.status) where.status = query.status;
-		if (query.search) {
-			where.OR = [
-				{ title: { contains: query.search, mode: "insensitive" } },
-				{ city: { contains: query.search, mode: "insensitive" } },
-			];
-		}
 
 		return this.findListingsWithPagination(where, query);
 	}
@@ -489,6 +475,46 @@ export class ListingService {
 	// ══════════════════════════════════════════════════════
 	//  Private Helpers
 	// ══════════════════════════════════════════════════════
+
+	/** Shared filter builder for public, host, and admin listing queries. */
+	private buildListingWhere(query: ListingQueryDto): Prisma.ListingWhereInput {
+		const where: Prisma.ListingWhereInput = {};
+
+		if (query.search) {
+			where.OR = [
+				{ title: { contains: query.search, mode: "insensitive" } },
+				{ description: { contains: query.search, mode: "insensitive" } },
+				{ city: { contains: query.search, mode: "insensitive" } },
+			];
+		}
+
+		if (query.city) {
+			where.city = { contains: query.city, mode: "insensitive" };
+		}
+		if (query.country) {
+			where.country = { contains: query.country, mode: "insensitive" };
+		}
+		if (query.propertyType) {
+			where.propertyType = query.propertyType;
+		}
+		if (query.guests) {
+			where.maxGuests = { gte: query.guests };
+		}
+		if (query.bedrooms) {
+			where.bedrooms = { gte: query.bedrooms };
+		}
+		if (query.bathrooms) {
+			where.bathrooms = { gte: query.bathrooms };
+		}
+
+		if (query.minPrice || query.maxPrice) {
+			where.basePrice = {};
+			if (query.minPrice) (where.basePrice as any).gte = query.minPrice;
+			if (query.maxPrice) (where.basePrice as any).lte = query.maxPrice;
+		}
+
+		return where;
+	}
 
 	/** Extract the object key from a MinIO URL. */
 	private extractObjectKey(url: string): string | null {

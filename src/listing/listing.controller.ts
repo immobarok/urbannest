@@ -47,6 +47,13 @@ export class ListingController {
 		return this.listingService.findPublicListings(query);
 	}
 
+	/** Get all unique cities with active listings (public). */
+	@Public()
+	@Get("cities")
+	async findAllCities(): Promise<string[]> {
+		return this.listingService.findCities();
+	}
+
 	/** View a single listing by ID (public). */
 	@Public()
 	@Get(":id")
