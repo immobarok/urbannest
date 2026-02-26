@@ -1,4 +1,4 @@
-import { CancellationPolicyType, PropertyType } from "@prisma/client";
+import { CancellationPolicyType, PropertyType, RoomType } from "@prisma/client";
 import { Type } from "class-transformer";
 import {
 	IsBoolean,
@@ -29,6 +29,9 @@ export class CreateListingDto {
 
 	@IsEnum(PropertyType)
 	propertyType!: PropertyType;
+
+	@IsEnum(RoomType)
+	roomType!: RoomType;
 
 	// ── Location ─────────────────────────────────────────
 

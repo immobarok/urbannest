@@ -18,6 +18,8 @@ export class DashboardController {
 			city: query.city,
 			minPrice: query.minPrice,
 			maxPrice: query.maxPrice,
+			roomType: query.roomType,
+			amenities: query.amenities,
 		});
 	}
 }

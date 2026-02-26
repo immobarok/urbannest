@@ -30,6 +30,13 @@ enum PropertyType {
   OTHER
 }
 
+enum RoomType {
+  SINGLE_ROOM
+  SHARED_ROOM
+  STUDIO
+  ENSUITE
+}
+
 enum BookingStatus {
   PENDING // Guest requested, awaiting host confirmation
   CONFIRMED // Host confirmed

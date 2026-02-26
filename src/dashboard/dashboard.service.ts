@@ -1,12 +1,18 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { ListingStatus, BookingStatus, Prisma } from "@prisma/client";
+import { ListingStatus, BookingStatus, Prisma, RoomType } from "@prisma/client";
 
 @Injectable()
 export class DashboardService {
 	constructor(private readonly prisma: PrismaService) {}
 
-	async getAdminStats(filters?: { city?: string; minPrice?: number; maxPrice?: number }) {
+	async getAdminStats(filters?: {
+		city?: string;
+		minPrice?: number;
+		maxPrice?: number;
+		roomType?: RoomType;
+		amenities?: string[];
+	}) {
 		const now = new Date();
 		// Start of the week (Sunday as first day)
 		const startOfWeek = new Date(now);
@@ -21,6 +27,30 @@ export class DashboardService {
 			listingWhere.basePrice = {};
 			if (filters.minPrice) (listingWhere.basePrice as any).gte = filters.minPrice;
 			if (filters.maxPrice) (listingWhere.basePrice as any).lte = filters.maxPrice;
+		}
+
+		if (filters?.roomType) {
+			listingWhere.roomType = filters.roomType;
+		}
+
+		if (filters?.amenities && filters?.amenities.length > 0) {
+			const amenityFilters = filters.amenities.map((name) => ({
+				amenities: {
+					some: {
+						amenity: {
+							name: { equals: name, mode: "insensitive" as const },
+						},
+					},
+				},
+			}));
+
+			const currentAnd = Array.isArray(listingWhere.AND)
+				? listingWhere.AND
+				: listingWhere.AND
+					? [listingWhere.AND]
+					: [];
+
+			listingWhere.AND = [...currentAnd, ...amenityFilters] as Prisma.ListingWhereInput[];
 		}
 
 		// For bookings, we filter by the listing's properties

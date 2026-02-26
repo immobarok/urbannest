@@ -1,4 +1,4 @@
-import { CancellationPolicyType, ListingStatus, PropertyType } from "@prisma/client";
+import { CancellationPolicyType, ListingStatus, PropertyType, RoomType } from "@prisma/client";
 
 // ── Listing Photo ──────────────────────────────────────
 
@@ -20,6 +20,7 @@ export class ListingEntity {
 	title!: string;
 	description!: string;
 	propertyType!: PropertyType;
+	roomType!: RoomType;
 	status!: ListingStatus;
 
 	address!: string;

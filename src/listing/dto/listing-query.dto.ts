@@ -1,6 +1,15 @@
-import { ListingStatus, PropertyType } from "@prisma/client";
+import { ListingStatus, PropertyType, RoomType } from "@prisma/client";
 import { Type } from "class-transformer";
-import { IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, Min } from "class-validator";
+import {
+	IsArray,
+	IsEnum,
+	IsInt,
+	IsNumber,
+	IsOptional,
+	IsString,
+	Max,
+	Min,
+} from "class-validator";
 
 export class ListingQueryDto {
 	@IsOptional()
@@ -31,6 +40,16 @@ export class ListingQueryDto {
 	@IsOptional()
 	@IsEnum(PropertyType)
 	propertyType?: PropertyType;
+
+	@IsOptional()
+	@IsEnum(RoomType)
+	roomType?: RoomType;
+
+	@IsOptional()
+	@IsArray()
+	@IsString({ each: true })
+	@IsOptional()
+	amenities?: string[];
 
 	@IsOptional()
 	@IsEnum(ListingStatus)

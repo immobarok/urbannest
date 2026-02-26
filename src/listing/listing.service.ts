@@ -118,6 +118,7 @@ export class ListingService {
 				title: dto.title,
 				description: dto.description,
 				propertyType: dto.propertyType,
+				roomType: dto.roomType,
 				status: ListingStatus.DRAFT,
 				address: dto.address,
 				city: dto.city,
@@ -497,6 +498,26 @@ export class ListingService {
 		if (query.propertyType) {
 			where.propertyType = query.propertyType;
 		}
+		if (query.roomType) {
+			where.roomType = query.roomType;
+		}
+
+		if (query.amenities && query.amenities.length > 0) {
+			const amenityFilters = query.amenities.map((name) => ({
+				amenities: {
+					some: {
+						amenity: {
+							name: { equals: name, mode: "insensitive" as const },
+						},
+					},
+				},
+			}));
+
+			const currentAnd = Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : [];
+
+			where.AND = [...currentAnd, ...amenityFilters] as Prisma.ListingWhereInput[];
+		}
+
 		if (query.guests) {
 			where.maxGuests = { gte: query.guests };
 		}
