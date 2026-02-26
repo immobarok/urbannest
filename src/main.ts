@@ -3,6 +3,7 @@ import { Logger, ValidationPipe, VersioningType } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { AppModule } from "./app.module";
 import { HttpExceptionFilter, AllExceptionsFilter } from "./common/filter";
+import { RedisIoAdapter } from "./common/adapters/redis-io.adapter";
 
 async function bootstrap() {
 	// ── Create Application ─────────────────────────────────────
@@ -80,6 +81,11 @@ async function bootstrap() {
 		}),
 	);
 	app.use(urlencoded({ extended: true, limit: bodyLimit }));
+
+	// ── Redis WebSocket Adapter ──────────────────────────────
+	const redisIoAdapter = new RedisIoAdapter(app);
+	await redisIoAdapter.connectToRedis();
+	app.useWebSocketAdapter(redisIoAdapter);
 
 	// ── Start Server ───────────────────────────────────────────
 	const port = configService.get<number>("PORT", 3000);

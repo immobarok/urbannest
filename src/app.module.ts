@@ -29,6 +29,7 @@ import { ContactModule } from "./contact/contact.module";
 import { BlogModule } from "./blog/blog.module";
 import { BookingModule } from "./booking/booking.module";
 import { PaymentModule } from "./payment/payment.module";
+import { ChatModule } from "./chat/chat.module";
 
 @Module({
 	imports: [
@@ -47,6 +48,7 @@ import { PaymentModule } from "./payment/payment.module";
 		BlogModule,
 		BookingModule,
 		PaymentModule,
+		ChatModule,
 	],
 	controllers: [AppController],
 	providers: [
