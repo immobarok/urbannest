@@ -13,9 +13,10 @@ import {
   UploadedFile,
   UploadedFiles,
   UseInterceptors,
-  ParseIntPipe,
   DefaultValuePipe,
+  SetMetadata,
 } from '@nestjs/common';
+import { ResponseMessage } from '../common/interceptors/transform.interceptor';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { MediaService } from './media.service';

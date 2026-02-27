@@ -12,6 +12,9 @@ import { Request } from 'express';
 /** Metadata key to skip the standard response envelope. */
 export const SKIP_TRANSFORM_KEY = 'skip-transform';
 
+/** Metadata key for custom success messages. */
+export const RESPONSE_MESSAGE_KEY = 'response-message';
+
 /**
  * Decorator to opt-out of the standard response wrapper on a per-route basis.
  *
@@ -23,6 +26,18 @@ export const SKIP_TRANSFORM_KEY = 'skip-transform';
  * ```
  */
 export const SkipTransform = () => SetMetadata(SKIP_TRANSFORM_KEY, true);
+
+/**
+ * Decorator to set a custom success message for the response envelope.
+ *
+ * @example
+ * ```ts
+ * @ResponseMessage('Listing created successfully')
+ * @Post()
+ * create() { ... }
+ * ```
+ */
+export const ResponseMessage = (message: string) => SetMetadata(RESPONSE_MESSAGE_KEY, message);
 
 /**
  * Standard API response envelope.
@@ -68,6 +83,11 @@ export class TransformInterceptor<T> implements NestInterceptor<
       context.getHandler(),
     );
 
+    const customMessage = this.reflector.get<string>(
+      RESPONSE_MESSAGE_KEY,
+      context.getHandler(),
+    );
+
     if (skip) {
       return next.handle();
     }
@@ -80,7 +100,7 @@ export class TransformInterceptor<T> implements NestInterceptor<
       map((data) => ({
         success: true,
         statusCode: response.statusCode,
-        message: this.getStatusMessage(response.statusCode),
+        message: customMessage || this.getStatusMessage(response.statusCode),
         path: request.originalUrl,
         timestamp: new Date().toISOString(),
         data,
