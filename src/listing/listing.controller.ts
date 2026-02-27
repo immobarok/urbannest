@@ -18,6 +18,7 @@ import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-express";
 import { Role } from "@prisma/client";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { Public } from "../common/decorators/public.decorator";
+import { ResponseMessage } from "../common/interceptors/transform.interceptor";
 import { ListingService } from "./listing.service";
 import {
 	AddListingPhotosDto,
@@ -35,7 +36,7 @@ const MAX_FILES = 20;
 
 @Controller("listings")
 export class ListingController {
-	constructor(private readonly listingService: ListingService) { }
+	constructor(private readonly listingService: ListingService) {}
 
 	// ══════════════════════════════════════════════════════
 	//  PUBLIC – Browse & View
@@ -84,6 +85,7 @@ export class ListingController {
 
 	/** Create a new listing (HOST only). */
 	@Post()
+	@ResponseMessage("Listing created successfully.")
 	async create(
 		@CurrentUser() user: { id: string; role: Role },
 		@Body() dto: CreateListingDto,
@@ -94,6 +96,7 @@ export class ListingController {
 
 	/** Update a listing (owner HOST only). */
 	@Patch(":id")
+	@ResponseMessage("Listing updated successfully.")
 	async update(
 		@Param("id") id: string,
 		@CurrentUser() user: { id: string; role: Role },
