@@ -57,7 +57,7 @@ export class TransformInterceptor<T> implements NestInterceptor<
   T,
   ApiResponse<T>
 > {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(private readonly reflector: Reflector) { }
 
   intercept(
     context: ExecutionContext,
@@ -92,8 +92,8 @@ export class TransformInterceptor<T> implements NestInterceptor<
     const messages: Record<number, string> = {
       200: 'OK',
       201: 'Created',
-      204: 'No Content',
+      204: 'Content not found 😥',
     };
-    return messages[statusCode] ?? 'Success';
+    return messages[statusCode] ?? 'Success ';
   }
 }

@@ -31,6 +31,7 @@ import { BookingModule } from "./booking/booking.module";
 import { PaymentModule } from "./payment/payment.module";
 import { ChatModule } from "./chat/chat.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
+import { BannerModule } from "./banner/banner.module";
 
 @Module({
 	imports: [
@@ -51,6 +52,7 @@ import { DashboardModule } from "./dashboard/dashboard.module";
 		PaymentModule,
 		ChatModule,
 		DashboardModule,
+		BannerModule,
 	],
 	controllers: [AppController],
 	providers: [

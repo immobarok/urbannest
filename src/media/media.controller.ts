@@ -13,6 +13,8 @@ import {
   UploadedFile,
   UploadedFiles,
   UseInterceptors,
+  ParseIntPipe,
+  DefaultValuePipe,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -32,9 +34,16 @@ const MAX_FILES = 10;
 
 @Controller('media')
 export class MediaController {
-  constructor(private readonly mediaService: MediaService) {}
+  constructor(private readonly mediaService: MediaService) { }
 
-  // ── Single Upload ────────────────────────────────────────────
+  // ============================================
+  // UPLOAD ENDPOINTS
+  // ============================================
+
+  /**
+   * Upload a single file
+   * POST /media/upload
+   */
   @Post('upload')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -49,7 +58,10 @@ export class MediaController {
     return this.mediaService.uploadSingle(file, userId, dto);
   }
 
-  // ── Multiple Upload ──────────────────────────────────────────
+  /**
+   * Upload multiple files (max 10)
+   * POST /media/upload-multiple
+   */
   @Post('upload-multiple')
   @UseInterceptors(
     FilesInterceptor('files', MAX_FILES, {
@@ -64,23 +76,40 @@ export class MediaController {
     return this.mediaService.uploadMultiple(files, userId, dto);
   }
 
-  // ── List Current User's Media ────────────────────────────────
+  // ============================================
+  // READ ENDPOINTS
+  // ============================================
+
+  /**
+   * List all media for current user with pagination
+   * GET /media?page=1&limit=20
+   */
   @Get()
   async findAll(
     @CurrentUser('id') userId: string,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ): Promise<MediaListEntity> {
-    return this.mediaService.findAllByUser(userId, page ?? 1, limit ?? 20);
+    return this.mediaService.findAllByUser(userId, page, limit);
   }
 
-  // ── Get Single ───────────────────────────────────────────────
+  /**
+   * Get single media by ID
+   * GET /media/:id
+   */
   @Get(':id')
   async findOne(@Param('id') id: string): Promise<MediaEntity> {
     return this.mediaService.findOne(id);
   }
 
-  // ── Update (alt text / replace image) ────────────────────────
+  // ============================================
+  // UPDATE ENDPOINTS
+  // ============================================
+
+  /**
+   * Update media metadata or replace file
+   * PATCH /media/:id
+   */
   @Patch(':id')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -96,7 +125,14 @@ export class MediaController {
     return this.mediaService.update(id, userId, dto, file);
   }
 
-  // ── Delete Single ────────────────────────────────────────────
+  // ============================================
+  // DELETE ENDPOINTS
+  // ============================================
+
+  /**
+   * Delete single media
+   * DELETE /media/:id
+   */
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   async remove(
@@ -106,7 +142,10 @@ export class MediaController {
     return this.mediaService.remove(id, userId);
   }
 
-  // ── Bulk Delete ──────────────────────────────────────────────
+  /**
+   * Bulk delete multiple media
+   * DELETE /media/bulk
+   */
   @Delete('bulk')
   @HttpCode(HttpStatus.OK)
   async removeBulk(
@@ -114,5 +153,26 @@ export class MediaController {
     @CurrentUser('id') userId: string,
   ): Promise<BulkDeleteResultEntity> {
     return this.mediaService.removeBulk(dto.ids, userId);
+  }
+
+
+  @Get(':id/signed-url')
+  async getSignedUrl(
+    @Param('id') id: string,
+    @Query('expiresIn') expiresIn?: number,
+  ): Promise<{ url: string }> {
+    const media = await this.mediaService.findOne(id);
+    const url = await this.mediaService.getSignedUrl(
+      media.filename,
+      expiresIn || 3600,
+    );
+    return { url };
+  }
+
+  @Get(':id/public-url')
+  async getPublicUrl(@Param('id') id: string): Promise<{ url: string }> {
+    const media = await this.mediaService.findOne(id);
+    const url = this.mediaService.getPublicUrl(media.filename);
+    return { url };
   }
 }

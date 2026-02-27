@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from "@nestjs/common";
-import { MinioService } from "src/minio";
+import { MediaService } from "src/media/media.service";
 import { PrismaService } from "src/prisma/prisma.service";
 import { CreateSectionDto } from "./dto/create-section.dto";
 import { UpdateSectionDto } from "./dto/update-section.dto";
@@ -12,8 +12,8 @@ export class WhychooseusService {
 
 	constructor(
 		private readonly prisma: PrismaService,
-		private readonly minio: MinioService,
-	) {}
+		private readonly mediaService: MediaService,
+	) { }
 
 	// ── Section Management ────────────────────────────────────────────────
 
@@ -76,7 +76,8 @@ export class WhychooseusService {
 		// Clean up card icons
 		for (const card of section.cards) {
 			if (card.iconUrl) {
-				await this.minio.deleteFile(card.iconUrl);
+				const key = this.mediaService.extractKeyFromUrl(card.iconUrl);
+				if (key) await this.mediaService.deleteFile(key);
 			}
 		}
 
@@ -100,7 +101,8 @@ export class WhychooseusService {
 
 		let iconUrl: string | undefined;
 		if (file) {
-			iconUrl = await this.minio.uploadFile(file, "whychooseus");
+			const upload = await this.mediaService.uploadFile(file, "whychooseus");
+			iconUrl = upload.url;
 		}
 
 		return this.prisma.whyChooseCard.create({
@@ -124,10 +126,12 @@ export class WhychooseusService {
 		let iconUrl = card.iconUrl;
 		if (file) {
 			// Upload new file
-			const newIconUrl = await this.minio.uploadFile(file, "whychooseus");
+			const upload = await this.mediaService.uploadFile(file, "whychooseus");
+			const newIconUrl = upload.url;
 			// Delete old file
 			if (card.iconUrl) {
-				await this.minio.deleteFile(card.iconUrl);
+				const oldKey = this.mediaService.extractKeyFromUrl(card.iconUrl);
+				if (oldKey) await this.mediaService.deleteFile(oldKey);
 			}
 			iconUrl = newIconUrl;
 		}
@@ -151,7 +155,8 @@ export class WhychooseusService {
 		}
 
 		if (card.iconUrl) {
-			await this.minio.deleteFile(card.iconUrl);
+			const key = this.mediaService.extractKeyFromUrl(card.iconUrl);
+			if (key) await this.mediaService.deleteFile(key);
 		}
 
 		return this.prisma.whyChooseCard.delete({ where: { id } });

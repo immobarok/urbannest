@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "src/prisma/prisma.service";
-import { MinioService } from "src/minio";
+import { MediaService } from "src/media/media.service";
 import { CreateHowitworkSectionDto } from "./dto/create-howitwork.dto";
 import { UpdateHowitworkSectionDto } from "./dto/update-howitwork.dto";
 import { CreateHowitworkStepDto } from "./dto/create-howitwork-step.dto";
@@ -12,8 +12,8 @@ export class HowitworksService {
 
 	constructor(
 		private readonly prisma: PrismaService,
-		private readonly minio: MinioService,
-	) {}
+		private readonly mediaService: MediaService,
+	) { }
 
 	// ── Section CRUD ─────────────────────────────────────────────
 
@@ -33,7 +33,10 @@ export class HowitworksService {
 			// Clean up old icons from Minio before deleting
 			for (const section of existing) {
 				for (const step of section.steps) {
-					await this.minio.deleteFile(step.icon);
+					if (step.icon) {
+						const key = this.mediaService.extractKeyFromUrl(step.icon);
+						if (key) await this.mediaService.deleteFile(key);
+					}
 				}
 			}
 
@@ -47,14 +50,14 @@ export class HowitworksService {
 					isActive: dto.isActive ?? true,
 					steps: dto.steps
 						? {
-								create: dto.steps.map((step) => ({
-									title: step.title,
-									description: step.description,
-									icon: step.icon,
-									order: step.order ?? 0,
-									isActive: step.isActive ?? true,
-								})),
-							}
+							create: dto.steps.map((step) => ({
+								title: step.title,
+								description: step.description,
+								icon: step.icon,
+								order: step.order ?? 0,
+								isActive: step.isActive ?? true,
+							})),
+						}
 						: undefined,
 				},
 				include: { steps: { orderBy: { order: "asc" } } },
@@ -119,7 +122,11 @@ export class HowitworksService {
 		this.logger.log(`Creating HowItWorks Step: ${dto.title}`);
 
 		// 1. Upload Icon first (if any)
-		const icon = file ? await this.minio.uploadFile(file, "howitworks") : dto.icon;
+		let icon = dto.icon;
+		if (file) {
+			const upload = await this.mediaService.uploadFile(file, "howitworks");
+			icon = upload.url;
+		}
 
 		// 2. Find ANY existing section (Singleton approach)
 		let section = await this.prisma.howItWorksSection.findFirst();
@@ -161,9 +168,13 @@ export class HowitworksService {
 
 		let icon = dto.icon;
 		if (file) {
-			icon = await this.minio.uploadFile(file, "howitworks");
+			const upload = await this.mediaService.uploadFile(file, "howitworks");
+			icon = upload.url;
 			// Clean up old icon
-			await this.minio.deleteFile(existing.icon);
+			if (existing.icon) {
+				const oldKey = this.mediaService.extractKeyFromUrl(existing.icon);
+				if (oldKey) await this.mediaService.deleteFile(oldKey);
+			}
 		}
 
 		// Verify new sectionId if changed
@@ -201,7 +212,10 @@ export class HowitworksService {
 		}
 
 		// Clean up icon from storage
-		await this.minio.deleteFile(step.icon);
+		if (step.icon) {
+			const key = this.mediaService.extractKeyFromUrl(step.icon);
+			if (key) await this.mediaService.deleteFile(key);
+		}
 
 		return this.prisma.howItWorksStep.delete({
 			where: { id },

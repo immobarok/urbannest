@@ -7,9 +7,8 @@ import {
 } from "@nestjs/common";
 import { ListingStatus, Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
-import { extname } from "path";
 import { PrismaService } from "../prisma/prisma.service";
-import { MinioService } from "../minio";
+import { MediaService } from "../media/media.service";
 import {
 	AddListingPhotosDto,
 	CreateListingDto,
@@ -19,18 +18,7 @@ import {
 } from "./dto";
 import { ListingEntity, ListingListEntity, ListingPhotoEntity } from "./entities";
 
-/** Allowed image MIME types */
-const ALLOWED_MIME_TYPES = [
-	"image/jpeg",
-	"image/png",
-	"image/gif",
-	"image/webp",
-	"image/svg+xml",
-	"image/avif",
-];
 
-/** 5 MB */
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 @Injectable()
 export class ListingService {
@@ -38,8 +26,8 @@ export class ListingService {
 
 	constructor(
 		private readonly prisma: PrismaService,
-		private readonly minio: MinioService,
-	) {}
+		private readonly mediaService: MediaService,
+	) { }
 
 	// ══════════════════════════════════════════════════════
 	//  Helpers
@@ -54,25 +42,7 @@ export class ListingService {
 		return `${base}-${randomUUID().slice(0, 8)}`;
 	}
 
-	/** Validate a single image file. */
-	private validateImageFile(file: Express.Multer.File): void {
-		if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-			throw new BadRequestException(
-				`Unsupported file type "${file.mimetype}". Allowed: ${ALLOWED_MIME_TYPES.join(", ")}`,
-			);
-		}
-		if (file.size > MAX_FILE_SIZE) {
-			throw new BadRequestException(`File "${file.originalname}" exceeds the 5 MB limit.`);
-		}
-	}
 
-	/** Generate a unique MinIO object key for a listing photo. */
-	private generatePhotoKey(originalName: string): string {
-		const ext = extname(originalName).toLowerCase();
-		const date = new Date();
-		const folder = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, "0")}`;
-		return `listings/${folder}/${randomUUID()}${ext}`;
-	}
 
 	/** Ensure the caller owns the listing and throw if not. */
 	private async findOwnedListing(id: string, hostId: string) {
@@ -203,17 +173,19 @@ export class ListingService {
 	async remove(id: string, hostId: string): Promise<ListingEntity> {
 		const existing = await this.findOwnedListing(id, hostId);
 
-		// Delete photos from MinIO
+		// Delete photos from MinIO and Media table
 		const photos = await this.prisma.listingPhoto.findMany({
 			where: { listingId: id },
 		});
+
 		if (photos.length > 0) {
-			const keys = photos
-				.map((p) => this.extractObjectKey(p.url))
+			const filenames = photos
+				.map((p) => this.mediaService.extractKeyFromUrl(p.url))
 				.filter(Boolean) as string[];
-			if (keys.length > 0) {
-				this.minio.deleteMany(keys).catch((err) => {
-					this.logger.warn(`Failed to delete listing photos from MinIO`, err);
+
+			if (filenames.length > 0) {
+				await this.mediaService.deleteFiles(filenames).catch((err) => {
+					this.logger.warn(`Failed to delete listing photos from storage`, err);
 				});
 			}
 		}
@@ -369,11 +341,11 @@ export class ListingService {
 			throw new BadRequestException("No file provided.");
 		}
 		await this.findOwnedListing(listingId, hostId);
-		this.validateImageFile(file);
 
-		const objectKey = this.generatePhotoKey(file.originalname);
-		await this.minio.upload(objectKey, file.buffer, file.size, file.mimetype);
-		const url = this.minio.getObjectUrl(objectKey);
+		// Use MediaService to handle upload and DB record creation
+		const media = await this.mediaService.uploadSingle(file, hostId, {
+			alt: dto.caption,
+		});
 
 		// If setting as cover, unset any existing cover
 		if (dto.isCover) {
@@ -386,7 +358,7 @@ export class ListingService {
 		const photo = await this.prisma.listingPhoto.create({
 			data: {
 				listingId,
-				url,
+				url: media.url,
 				caption: dto.caption ?? null,
 				isCover: dto.isCover ?? false,
 				sortOrder: dto.sortOrder ?? 0,
@@ -394,7 +366,7 @@ export class ListingService {
 		});
 
 		this.logger.log(`Added photo ${photo.id} to listing ${listingId}`);
-		return photo;
+		return photo as unknown as ListingPhotoEntity;
 	}
 
 	// ══════════════════════════════════════════════════════
@@ -412,29 +384,27 @@ export class ListingService {
 		}
 		await this.findOwnedListing(listingId, hostId);
 
-		for (const file of files) {
-			this.validateImageFile(file);
-		}
+		// Use MediaService to handle bulk upload
+		const mediaEntities = await this.mediaService.uploadMultiple(files, hostId, {
+			alt: dto.caption,
+		});
 
 		const results: ListingPhotoEntity[] = [];
 
-		for (let i = 0; i < files.length; i++) {
-			const file = files[i];
-			const objectKey = this.generatePhotoKey(file.originalname);
-			await this.minio.upload(objectKey, file.buffer, file.size, file.mimetype);
-			const url = this.minio.getObjectUrl(objectKey);
+		for (let i = 0; i < mediaEntities.length; i++) {
+			const media = mediaEntities[i];
 
 			const photo = await this.prisma.listingPhoto.create({
 				data: {
 					listingId,
-					url,
+					url: media.url,
 					caption: dto.caption ?? null,
 					isCover: i === 0 && (dto.isCover ?? false),
 					sortOrder: (dto.sortOrder ?? 0) + i,
 				},
 			});
 
-			results.push(photo);
+			results.push(photo as unknown as ListingPhotoEntity);
 		}
 
 		this.logger.log(`Added ${results.length} photo(s) to listing ${listingId}`);
@@ -461,16 +431,16 @@ export class ListingService {
 
 		await this.prisma.listingPhoto.delete({ where: { id: photoId } });
 
-		// Delete from MinIO
-		const key = this.extractObjectKey(photo.url);
+		// Delete from storage
+		const key = this.mediaService.extractKeyFromUrl(photo.url);
 		if (key) {
-			this.minio.delete(key).catch((err) => {
+			this.mediaService.deleteFile(key).catch((err) => {
 				this.logger.warn(`Failed to delete photo object: ${key}`, err);
 			});
 		}
 
 		this.logger.log(`Deleted photo ${photoId} from listing ${listingId}`);
-		return photo;
+		return photo as unknown as ListingPhotoEntity;
 	}
 
 	// ══════════════════════════════════════════════════════
@@ -537,13 +507,7 @@ export class ListingService {
 		return where;
 	}
 
-	/** Extract the object key from a MinIO URL. */
-	private extractObjectKey(url: string): string | null {
-		const bucket = this.minio.getBucket();
-		const idx = url.indexOf(`/${bucket}/`);
-		if (idx === -1) return null;
-		return url.slice(idx + bucket.length + 2);
-	}
+
 
 	/** Shared pagination helper. */
 	private async findListingsWithPagination(

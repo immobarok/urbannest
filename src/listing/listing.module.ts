@@ -2,12 +2,12 @@ import { Module } from "@nestjs/common";
 import { ListingController } from "./listing.controller";
 import { ListingService } from "./listing.service";
 import { PrismaModule } from "../prisma/prisma.module";
-import { MinioModule } from "../minio";
+import { MediaModule } from "../media/media.module";
 
 @Module({
-	imports: [PrismaModule, MinioModule],
+	imports: [PrismaModule, MediaModule],
 	controllers: [ListingController],
 	providers: [ListingService],
 	exports: [ListingService],
 })
-export class ListingModule {}
+export class ListingModule { }

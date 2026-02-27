@@ -11,13 +11,9 @@ import { extname } from "path";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateBrandDto } from "./dto/create-brand.dto";
 import { UpdateBrandDto } from "./dto/update-brand.dto";
-import { MinioService } from "../minio/minio.service";
+import { MediaService } from "../media/media.service";
 
-/** Allowed image MIME types */
-const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"];
 
-/** 2 MB in bytes */
-const MAX_FILE_SIZE = 2 * 1024 * 1024;
 
 @Injectable()
 export class BrandsService {
@@ -25,28 +21,10 @@ export class BrandsService {
 
 	constructor(
 		private readonly prisma: PrismaService,
-		private readonly minio: MinioService,
-	) {}
+		private readonly mediaService: MediaService,
+	) { }
 
-	/** Generate a unique object key for a brand logo. */
-	private generateLogoKey(originalName: string): string {
-		const ext = extname(originalName).toLowerCase();
-		const date = new Date();
-		const folder = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, "0")}`;
-		return `brands/${folder}/${randomUUID()}${ext}`;
-	}
 
-	/** Validate file type and size */
-	private validateFile(file: Express.Multer.File): void {
-		if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-			throw new BadRequestException(
-				`Unsupported file type "${file.mimetype}". Allowed: ${ALLOWED_MIME_TYPES.join(", ")}`,
-			);
-		}
-		if (file.size > MAX_FILE_SIZE) {
-			throw new BadRequestException(`File "${file.originalname}" exceeds the 2 MB limit.`);
-		}
-	}
 
 	async create(userId: string, dto: CreateBrandDto, file?: Express.Multer.File) {
 		const existing = await this.prisma.brands.findUnique({
@@ -59,10 +37,8 @@ export class BrandsService {
 		let logoUrl = dto.logoUrl;
 
 		if (file) {
-			this.validateFile(file);
-			const objectKey = this.generateLogoKey(file.originalname);
-			await this.minio.upload(objectKey, file.buffer, file.size, file.mimetype);
-			logoUrl = this.minio.getObjectUrl(objectKey);
+			const upload = await this.mediaService.uploadFile(file, "brands");
+			logoUrl = upload.url;
 		}
 
 		const brand = await this.prisma.brands.create({
@@ -131,10 +107,8 @@ export class BrandsService {
 
 		// Handle file upload if provided
 		if (file) {
-			this.validateFile(file);
-			const objectKey = this.generateLogoKey(file.originalname);
-			await this.minio.upload(objectKey, file.buffer, file.size, file.mimetype);
-			logoUrl = this.minio.getObjectUrl(objectKey);
+			const upload = await this.mediaService.uploadFile(file, "brands");
+			logoUrl = upload.url;
 		}
 
 		try {

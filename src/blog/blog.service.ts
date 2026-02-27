@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from "@nestjs/common";
-import { MinioService } from "src/minio";
+import { MediaService } from "src/media/media.service";
 import { PrismaService } from "src/prisma/prisma.service";
 import { CreateBlogDto } from "./dto/create-blog.dto";
 import { UpdateBlogDto } from "./dto/update-blog.dto";
@@ -11,8 +11,8 @@ export class BlogService {
 	private readonly logger = new Logger(BlogService.name);
 	constructor(
 		private readonly prisma: PrismaService,
-		private readonly minio: MinioService,
-	) {}
+		private readonly mediaService: MediaService,
+	) { }
 
 	async create(dto: CreateBlogDto): Promise<BlogEntity> {
 		this.logger.log(`Creating blog post: ${dto.title}`);
@@ -103,8 +103,9 @@ export class BlogService {
 
 		await this.findOne(id); // Ensure blog exists
 
-		// Upload file to MinIO
-		const url = await this.minio.uploadFile(file, "blogs");
+		// Upload file to media service
+		const upload = await this.mediaService.uploadFile(file, "blogs");
+		const url = upload.url;
 
 		// Save image record in database
 		await this.prisma.blogImage.create({
@@ -134,6 +135,12 @@ export class BlogService {
 		await this.prisma.blogImage.delete({
 			where: { id: photoId },
 		});
+
+		// Cleanup storage
+		const key = this.mediaService.extractKeyFromUrl(photo.url);
+		if (key) {
+			this.mediaService.deleteFile(key).catch(() => null);
+		}
 
 		return this.findOne(blogId);
 	}

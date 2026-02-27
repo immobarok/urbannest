@@ -28,13 +28,14 @@ import {
 	UpdateListingDto,
 } from "./dto";
 import { ListingEntity, ListingListEntity, ListingPhotoEntity } from "./entities";
+import { MediaService } from "../media/media.service";
 
-const MAX_SIZE = 5 * 1024 * 1024;
+const MAX_SIZE = MediaService.MAX_SIZE_5MB;
 const MAX_FILES = 20;
 
 @Controller("listings")
 export class ListingController {
-	constructor(private readonly listingService: ListingService) {}
+	constructor(private readonly listingService: ListingService) { }
 
 	// ══════════════════════════════════════════════════════
 	//  PUBLIC – Browse & View
