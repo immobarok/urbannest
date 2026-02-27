@@ -1,4 +1,3 @@
-/// <reference types="multer" />
 import {
   Body,
   Controller,
@@ -14,9 +13,8 @@ import {
   UploadedFiles,
   UseInterceptors,
   DefaultValuePipe,
-  SetMetadata,
+  ParseIntPipe,
 } from '@nestjs/common';
-import { ResponseMessage } from '../common/interceptors/transform.interceptor';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { MediaService } from './media.service';
