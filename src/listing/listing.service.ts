@@ -18,8 +18,6 @@ import {
 } from "./dto";
 import { ListingEntity, ListingListEntity, ListingPhotoEntity } from "./entities";
 
-
-
 @Injectable()
 export class ListingService {
 	private readonly logger = new Logger(ListingService.name);
@@ -27,7 +25,7 @@ export class ListingService {
 	constructor(
 		private readonly prisma: PrismaService,
 		private readonly mediaService: MediaService,
-	) { }
+	) {}
 
 	// ══════════════════════════════════════════════════════
 	//  Helpers
@@ -41,8 +39,6 @@ export class ListingService {
 			.replace(/^-|-$/g, "");
 		return `${base}-${randomUUID().slice(0, 8)}`;
 	}
-
-
 
 	/** Ensure the caller owns the listing and throw if not. */
 	private async findOwnedListing(id: string, hostId: string) {
@@ -506,8 +502,6 @@ export class ListingService {
 
 		return where;
 	}
-
-
 
 	/** Shared pagination helper. */
 	private async findListingsWithPagination(

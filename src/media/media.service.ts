@@ -4,14 +4,15 @@ import {
 	Logger,
 	NotFoundException,
 	OnModuleInit,
-} from '@nestjs/common';
-import { readdir, readFile } from 'node:fs/promises';
-import { join, extname } from 'node:path';
-import { lookup } from 'mime-types';
-import * as Minio from 'minio';
-import { PrismaService } from '../prisma/prisma.service';
-import { UploadMediaDto, UpdateMediaDto } from './dto';
-import { MediaEntity, MediaListEntity, BulkDeleteResultEntity } from './entities';
+} from "@nestjs/common";
+import { readdir, readFile } from "node:fs/promises";
+import { join, extname } from "node:path";
+import { lookup } from "mime-types";
+import * as Minio from "minio";
+import "multer";
+import { PrismaService } from "../prisma/prisma.service";
+import { UploadMediaDto, UpdateMediaDto } from "./dto";
+import { MediaEntity, MediaListEntity, BulkDeleteResultEntity } from "./entities";
 
 @Injectable()
 export class MediaService implements OnModuleInit {
@@ -21,23 +22,39 @@ export class MediaService implements OnModuleInit {
 	private readonly mediaEndpoint = process.env.MINIO_ENDPOINT as string;
 	private readonly accessKeyId = process.env.MINIO_ACCESS_KEY as string;
 	private readonly secretAccessKey = process.env.MINIO_SECRET_KEY as string;
-	private readonly endpointPort = parseInt(process.env.MINIO_PORT ?? '9000');
-	private readonly useSSL = process.env.MINIO_USE_SSL === 'true';
+	private readonly endpointPort = parseInt(process.env.MINIO_PORT ?? "9000");
+	private readonly useSSL = process.env.MINIO_USE_SSL === "true";
 
 	private readonly imageExtensions = [
-		'.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico',
+		".jpg",
+		".jpeg",
+		".png",
+		".gif",
+		".webp",
+		".svg",
+		".bmp",
+		".ico",
 	];
 	private readonly videoExtensions = [
-		'.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv', '.webm', '.m4v', '.mpg', '.mpeg',
+		".mp4",
+		".avi",
+		".mov",
+		".wmv",
+		".flv",
+		".mkv",
+		".webm",
+		".m4v",
+		".mpg",
+		".mpeg",
 	];
 
 	public static readonly ALLOWED_IMAGE_MIMES = [
-		'image/jpeg',
-		'image/png',
-		'image/gif',
-		'image/webp',
-		'image/svg+xml',
-		'image/avif',
+		"image/jpeg",
+		"image/png",
+		"image/gif",
+		"image/webp",
+		"image/svg+xml",
+		"image/avif",
 	];
 
 	public static readonly MAX_SIZE_5MB = 5 * 1024 * 1024;
@@ -45,7 +62,7 @@ export class MediaService implements OnModuleInit {
 	constructor(private readonly prisma: PrismaService) {
 		const rawBucketName = process.env.MINIO_BUCKET as string;
 		if (!rawBucketName) {
-			throw new Error('MINIO_BUCKET environment variable is required');
+			throw new Error("MINIO_BUCKET environment variable is required");
 		}
 
 		this.bucketName = this.sanitizeBucketName(rawBucketName);
@@ -75,11 +92,11 @@ export class MediaService implements OnModuleInit {
 	private sanitizeBucketName(name: string): string {
 		return name
 			.toLowerCase()
-			.replace(/_/g, '-')
-			.replace(/[^a-z0-9.-]/g, '')
-			.replace(/^[.-]+|[.-]+$/g, '')
-			.replace(/\.{2,}/g, '.')
-			.replace(/-{2,}/g, '-')
+			.replace(/_/g, "-")
+			.replace(/[^a-z0-9.-]/g, "")
+			.replace(/^[.-]+|[.-]+$/g, "")
+			.replace(/\.{2,}/g, ".")
+			.replace(/-{2,}/g, "-")
 			.slice(0, 63);
 	}
 
@@ -90,7 +107,7 @@ export class MediaService implements OnModuleInit {
 			await this.ensureBucketIsPublic();
 			await this.uploadPlaceholderImages();
 		} catch (error) {
-			this.logger.error('Failed to initialize MediaService:', error);
+			this.logger.error("Failed to initialize MediaService:", error);
 			throw error;
 		}
 	}
@@ -112,15 +129,11 @@ export class MediaService implements OnModuleInit {
 
 		const ipRegex = /^\d+\.\d+\.\d+\.\d+$/;
 		if (ipRegex.test(this.bucketName)) {
-			throw new Error(
-				`Bucket name cannot be formatted as IP address: "${this.bucketName}"`,
-			);
+			throw new Error(`Bucket name cannot be formatted as IP address: "${this.bucketName}"`);
 		}
 
-		if (this.bucketName.includes('..')) {
-			throw new Error(
-				`Bucket name cannot contain consecutive periods: "${this.bucketName}"`,
-			);
+		if (this.bucketName.includes("..")) {
+			throw new Error(`Bucket name cannot contain consecutive periods: "${this.bucketName}"`);
 		}
 
 		this.logger.log(`Bucket name "${this.bucketName}" is valid`);
@@ -128,7 +141,7 @@ export class MediaService implements OnModuleInit {
 
 	private async ensureBucketExists() {
 		try {
-			this.logger.log('Checking if bucket exists...');
+			this.logger.log("Checking if bucket exists...");
 
 			const exists = await this.minioClient.bucketExists(this.bucketName);
 
@@ -136,23 +149,23 @@ export class MediaService implements OnModuleInit {
 				this.logger.log(`Bucket "${this.bucketName}" already exists`);
 			} else {
 				this.logger.log(`Bucket "${this.bucketName}" not found. Creating...`);
-				await this.minioClient.makeBucket(this.bucketName, 'us-east-1');
+				await this.minioClient.makeBucket(this.bucketName, "us-east-1");
 				this.logger.log(`Bucket "${this.bucketName}" created successfully`);
 			}
 		} catch (error: any) {
-			this.logger.error('Error checking/creating bucket:', error.message);
+			this.logger.error("Error checking/creating bucket:", error.message);
 			throw error;
 		}
 	}
 
 	private async ensureBucketIsPublic() {
 		const policy = JSON.stringify({
-			Version: '2012-10-17',
+			Version: "2012-10-17",
 			Statement: [
 				{
-					Effect: 'Allow',
-					Principal: { AWS: ['*'] },
-					Action: ['s3:GetObject'],
+					Effect: "Allow",
+					Principal: { AWS: ["*"] },
+					Action: ["s3:GetObject"],
 					Resource: [`arn:aws:s3:::${this.bucketName}/*`],
 				},
 			],
@@ -160,10 +173,10 @@ export class MediaService implements OnModuleInit {
 
 		try {
 			await this.minioClient.setBucketPolicy(this.bucketName, policy);
-			this.logger.log('Bucket policy set to public successfully');
+			this.logger.log("Bucket policy set to public successfully");
 		} catch (error) {
-			this.logger.warn('Bucket policy not set (default permissions apply)');
-			this.logger.debug('Policy error (safe to ignore):', error);
+			this.logger.warn("Bucket policy not set (default permissions apply)");
+			this.logger.debug("Policy error (safe to ignore):", error);
 		}
 	}
 
@@ -173,7 +186,7 @@ export class MediaService implements OnModuleInit {
 
 	private async uploadPlaceholderImages() {
 		try {
-			const placeholderFolder = join(process.cwd(), 'public', 'placeholders');
+			const placeholderFolder = join(process.cwd(), "public", "placeholders");
 			this.logger.log(`Checking for placeholder images in: /public/placeholders`);
 
 			let files: string[];
@@ -189,7 +202,7 @@ export class MediaService implements OnModuleInit {
 			);
 
 			if (imageFiles.length === 0) {
-				this.logger.log('No placeholder images found');
+				this.logger.log("No placeholder images found");
 				return;
 			}
 
@@ -199,9 +212,9 @@ export class MediaService implements OnModuleInit {
 				await this.uploadPlaceholderIfNotExists(placeholderFolder, fileName);
 			}
 
-			this.logger.log('Placeholder images sync completed');
+			this.logger.log("Placeholder images sync completed");
 		} catch (error) {
-			this.logger.error('Error uploading placeholder images:', error);
+			this.logger.error("Error uploading placeholder images:", error);
 		}
 	}
 
@@ -212,7 +225,7 @@ export class MediaService implements OnModuleInit {
 			await this.minioClient.statObject(this.bucketName, key);
 			this.logger.log(`Skipping "${fileName}" (already exists)`);
 		} catch (error: any) {
-			if (error.code === 'NotFound' || error.message?.includes('Not Found')) {
+			if (error.code === "NotFound" || error.message?.includes("Not Found")) {
 				await this.uploadPlaceholderFile(folderPath, fileName, key);
 			} else {
 				this.logger.error(`Error checking "${fileName}":`, error);
@@ -225,13 +238,9 @@ export class MediaService implements OnModuleInit {
 			const fileBuffer = await readFile(join(folderPath, fileName));
 			const mimeType = this.getMimeType(fileName);
 
-			await this.minioClient.putObject(
-				this.bucketName,
-				key,
-				fileBuffer,
-				fileBuffer.length,
-				{ 'Content-Type': mimeType },
-			);
+			await this.minioClient.putObject(this.bucketName, key, fileBuffer, fileBuffer.length, {
+				"Content-Type": mimeType,
+			});
 
 			this.logger.log(`Uploaded "${fileName}" to MinIO`);
 		} catch (error) {
@@ -244,15 +253,15 @@ export class MediaService implements OnModuleInit {
 	// ============================================
 
 	private getMimeType(fileName: string): string {
-		const detected = lookup(fileName);
-		return typeof detected === 'string' ? detected : 'application/octet-stream';
+		const detected = lookup(fileName) as string | false;
+		return detected || "application/octet-stream";
 	}
 
-	private getFileCategory(fileName: string): 'images' | 'videos' | 'files' {
+	private getFileCategory(fileName: string): "images" | "videos" | "files" {
 		const ext = extname(fileName).toLowerCase();
-		if (this.imageExtensions.includes(ext)) return 'images';
-		if (this.videoExtensions.includes(ext)) return 'videos';
-		return 'files';
+		if (this.imageExtensions.includes(ext)) return "images";
+		if (this.videoExtensions.includes(ext)) return "videos";
+		return "files";
 	}
 
 	private getOrganizedFolder(fileName: string, customFolder?: string): string {
@@ -273,7 +282,7 @@ export class MediaService implements OnModuleInit {
 		customFolder?: string,
 	): Promise<{ key: string; url: string; category: string }> {
 		if (!file) {
-			throw new BadRequestException('No file provided');
+			throw new BadRequestException("No file provided");
 		}
 
 		// Validate file size and type
@@ -283,13 +292,9 @@ export class MediaService implements OnModuleInit {
 		const key = `${folder}${Date.now()}-${file.originalname}`;
 		const category = this.getFileCategory(file.originalname);
 
-		await this.minioClient.putObject(
-			this.bucketName,
-			key,
-			file.buffer,
-			file.buffer.length,
-			{ 'Content-Type': file.mimetype },
-		);
+		await this.minioClient.putObject(this.bucketName, key, file.buffer, file.buffer.length, {
+			"Content-Type": file.mimetype,
+		});
 
 		this.logger.log(`Uploaded file: "${key}"`);
 
@@ -305,14 +310,12 @@ export class MediaService implements OnModuleInit {
 		customFolder?: string,
 	): Promise<{ key: string; url: string; category: string }[]> {
 		if (!files || files.length === 0) {
-			throw new BadRequestException('No files provided');
+			throw new BadRequestException("No files provided");
 		}
 
 		this.logger.log(`Uploading ${files.length} file(s)...`);
 
-		const results = await Promise.all(
-			files.map((file) => this.uploadFile(file, customFolder)),
-		);
+		const results = await Promise.all(files.map((file) => this.uploadFile(file, customFolder)));
 
 		this.logger.log(`Successfully uploaded ${results.length} file(s)`);
 
@@ -324,7 +327,7 @@ export class MediaService implements OnModuleInit {
 	 */
 	async deleteFile(key: string): Promise<void> {
 		if (!key) {
-			throw new BadRequestException('File key is required');
+			throw new BadRequestException("File key is required");
 		}
 
 		await this.minioClient.removeObject(this.bucketName, key);
@@ -336,7 +339,7 @@ export class MediaService implements OnModuleInit {
 	 */
 	async deleteFiles(keys: string[]): Promise<void> {
 		if (!keys || keys.length === 0) {
-			throw new BadRequestException('No file keys provided');
+			throw new BadRequestException("No file keys provided");
 		}
 
 		this.logger.log(`🗑 Deleting ${keys.length} file(s)...`);
@@ -350,14 +353,10 @@ export class MediaService implements OnModuleInit {
 	 */
 	async getSignedUrl(key: string, expiresIn = 3600): Promise<string> {
 		if (!key) {
-			throw new BadRequestException('File key is required');
+			throw new BadRequestException("File key is required");
 		}
 
-		return await this.minioClient.presignedGetObject(
-			this.bucketName,
-			key,
-			expiresIn,
-		);
+		return await this.minioClient.presignedGetObject(this.bucketName, key, expiresIn);
 	}
 
 	/**
@@ -365,7 +364,7 @@ export class MediaService implements OnModuleInit {
 	 */
 	getPublicUrl(key: string): string {
 		if (!key) {
-			throw new BadRequestException('File key is required');
+			throw new BadRequestException("File key is required");
 		}
 
 		return `${this.mediaEndpoint}/${this.bucketName}/${key}`;
@@ -391,7 +390,10 @@ export class MediaService implements OnModuleInit {
 	/**
 	 * Centralized file validation.
 	 */
-	validateFile(file: Express.Multer.File, options?: { maxSize?: number, allowedMimes?: string[] }) {
+	validateFile(
+		file: Express.Multer.File,
+		options?: { maxSize?: number; allowedMimes?: string[] },
+	) {
 		const maxSize = options?.maxSize || MediaService.MAX_SIZE_5MB;
 		const allowedMimes = options?.allowedMimes || MediaService.ALLOWED_IMAGE_MIMES;
 
@@ -401,7 +403,7 @@ export class MediaService implements OnModuleInit {
 
 		if (!allowedMimes.includes(file.mimetype)) {
 			throw new BadRequestException(
-				`Unsupported file type "${file.mimetype}". Allowed: ${allowedMimes.join(', ')}`,
+				`Unsupported file type "${file.mimetype}". Allowed: ${allowedMimes.join(", ")}`,
 			);
 		}
 	}
@@ -467,7 +469,7 @@ export class MediaService implements OnModuleInit {
 				where: { uploaderId: userId },
 				skip,
 				take: Number(limit),
-				orderBy: { createdAt: 'desc' },
+				orderBy: { createdAt: "desc" },
 			}),
 			this.prisma.media.count({
 				where: { uploaderId: userId },
@@ -484,7 +486,7 @@ export class MediaService implements OnModuleInit {
 
 	async findOne(id: string): Promise<MediaEntity> {
 		const media = await this.prisma.media.findUnique({ where: { id } });
-		if (!media) throw new NotFoundException('Media not found');
+		if (!media) throw new NotFoundException("Media not found");
 		return media;
 	}
 
@@ -498,23 +500,22 @@ export class MediaService implements OnModuleInit {
 			where: { id },
 		});
 
-		if (!media) throw new NotFoundException('Media not found');
-		if (media.uploaderId !== userId) throw new BadRequestException('Not authorized');
+		if (!media) throw new NotFoundException("Media not found");
+		if (media.uploaderId !== userId) throw new BadRequestException("Not authorized");
 
-		let updateData: any = { ...dto };
+		const updateData: Record<string, any> = { ...dto };
 
 		if (file) {
 			const uploaded = await this.uploadFile(file);
 			await this.deleteFile(media.filename).catch(() => null);
 
-			updateData = {
-				...updateData,
+			Object.assign(updateData, {
 				filename: uploaded.key,
 				originalName: file.originalname,
 				mimeType: file.mimetype,
 				size: file.size,
 				url: uploaded.url,
-			};
+			});
 		}
 
 		return this.prisma.media.update({
@@ -525,8 +526,8 @@ export class MediaService implements OnModuleInit {
 
 	async remove(id: string, userId: string): Promise<MediaEntity> {
 		const media = await this.prisma.media.findUnique({ where: { id } });
-		if (!media) throw new NotFoundException('Media not found');
-		if (media.uploaderId !== userId) throw new BadRequestException('Not authorized');
+		if (!media) throw new NotFoundException("Media not found");
+		if (media.uploaderId !== userId) throw new BadRequestException("Not authorized");
 
 		await this.deleteFile(media.filename).catch(() => null);
 
@@ -538,7 +539,7 @@ export class MediaService implements OnModuleInit {
 			where: { id: { in: ids }, uploaderId: userId },
 		});
 
-		if (mediaList.length === 0) return { deleted: 0, message: 'No media deleted' };
+		if (mediaList.length === 0) return { deleted: 0, message: "No media deleted" };
 
 		const filenames = mediaList.map((m) => m.filename);
 		await this.deleteFiles(filenames).catch(() => null);
