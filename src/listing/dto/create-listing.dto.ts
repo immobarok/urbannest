@@ -12,6 +12,7 @@ import {
 	MaxLength,
 	Min,
 	MinLength,
+	IsArray,
 } from "class-validator";
 
 export class CreateListingDto {
@@ -153,4 +154,18 @@ export class CreateListingDto {
 	@IsString()
 	@MaxLength(320)
 	metaDescription?: string;
+
+	// ── Relations ────────────────────────────────────────
+
+	@IsOptional()
+	@IsArray()
+	@IsString({ each: true })
+	@Type(() => String)
+	amenityIds?: string[];
+
+	@IsOptional()
+	@IsArray()
+	@IsString({ each: true })
+	@Type(() => String)
+	houseRules?: string[];
 }

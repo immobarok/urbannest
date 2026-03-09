@@ -25,7 +25,7 @@ export class ListingService {
 	constructor(
 		private readonly prisma: PrismaService,
 		private readonly mediaService: MediaService,
-	) {}
+	) { }
 
 	// ══════════════════════════════════════════════════════
 	//  Helpers
@@ -75,44 +75,62 @@ export class ListingService {
 	//  HOST – Create
 	// ══════════════════════════════════════════════════════
 
-	async create(hostId: string, dto: CreateListingDto): Promise<ListingEntity> {
+	async create(
+		hostId: string,
+		dto: CreateListingDto,
+		file?: Express.Multer.File,
+	): Promise<ListingEntity> {
 		const slug = this.generateSlug(dto.title);
+		const { amenityIds, houseRules, ...listingData } = dto;
 
 		const listing = await this.prisma.listing.create({
 			data: {
+				...listingData,
 				hostId,
-				title: dto.title,
-				description: dto.description,
-				propertyType: dto.propertyType,
-				roomType: dto.roomType,
 				status: ListingStatus.DRAFT,
-				address: dto.address,
-				city: dto.city,
-				state: dto.state,
-				country: dto.country,
-				zipCode: dto.zipCode,
-				latitude: dto.latitude,
-				longitude: dto.longitude,
-				maxGuests: dto.maxGuests,
-				bedrooms: dto.bedrooms,
-				bathrooms: dto.bathrooms,
-				beds: dto.beds,
-				basePrice: dto.basePrice,
-				cleaningFee: dto.cleaningFee,
-				serviceFeePercent: dto.serviceFeePercent,
-				securityDeposit: dto.securityDeposit,
-				minNights: dto.minNights,
-				maxNights: dto.maxNights,
-				cancellationPolicy: dto.cancellationPolicy,
-				instantBook: dto.instantBook,
 				slug,
-				metaTitle: dto.metaTitle,
-				metaDescription: dto.metaDescription,
+				amenities: amenityIds?.length
+					? {
+						create: amenityIds.map((id) => ({
+							amenity: { connect: { id } },
+						})),
+					}
+					: undefined,
+				houseRules: houseRules?.length
+					? {
+						create: houseRules.map((rule, index) => ({
+							rule,
+							sortOrder: index,
+						})),
+					}
+					: undefined,
 			},
 			include: this.detailInclude,
 		});
 
+		// Upload cover photo if provided
+		if (file) {
+			const media = await this.mediaService.uploadSingle(file, hostId, {
+				alt: `${dto.title} - Cover Photo`,
+			});
+
+			await this.prisma.listingPhoto.create({
+				data: {
+					listingId: listing.id,
+					url: media.url,
+					isCover: true,
+					sortOrder: 0,
+				},
+			});
+		}
+
 		this.logger.log(`Created listing ${listing.id} by host ${hostId}`);
+
+		// Return refreshed listing with photos if we added one
+		if (file) {
+			return this.findOne(listing.id);
+		}
+
 		return listing as unknown as ListingEntity;
 	}
 
@@ -123,13 +141,40 @@ export class ListingService {
 	async update(id: string, hostId: string, dto: UpdateListingDto): Promise<ListingEntity> {
 		await this.findOwnedListing(id, hostId);
 
+		const { amenityIds, houseRules, ...listingData } = dto;
+
 		const listing = await this.prisma.listing.update({
 			where: { id },
 			data: {
-				...dto,
+				...listingData,
 				// If the listing was rejected, allow resubmission as draft
 				...(dto.title || dto.description
 					? { status: ListingStatus.DRAFT, rejectionReason: null }
+					: {}),
+
+				// Sync Amenities if provided
+				...(amenityIds !== undefined
+					? {
+						amenities: {
+							deleteMany: {}, // Clear existing
+							create: amenityIds.map((aId) => ({
+								amenity: { connect: { id: aId } },
+							})),
+						},
+					}
+					: {}),
+
+				// Sync House Rules if provided
+				...(houseRules !== undefined
+					? {
+						houseRules: {
+							deleteMany: {}, // Clear existing
+							create: houseRules.map((rule, index) => ({
+								rule,
+								sortOrder: index,
+							})),
+						},
+					}
 					: {}),
 			},
 			include: this.detailInclude,

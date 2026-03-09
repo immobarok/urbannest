@@ -36,7 +36,7 @@ const MAX_FILES = 20;
 
 @Controller("listings")
 export class ListingController {
-	constructor(private readonly listingService: ListingService) {}
+	constructor(private readonly listingService: ListingService) { }
 
 	// ══════════════════════════════════════════════════════
 	//  PUBLIC – Browse & View
@@ -83,15 +83,17 @@ export class ListingController {
 		return this.listingService.findMyListings(hostId, query);
 	}
 
-	/** Create a new listing (HOST only). */
+	/** Create a new listing (HOST only). Supports multipart/form-data for optional cover photo. */
 	@Post()
+	@UseInterceptors(FileInterceptor("file", { limits: { fileSize: MAX_SIZE } }))
 	@ResponseMessage("Listing created successfully.")
 	async create(
 		@CurrentUser() user: { id: string; role: Role },
 		@Body() dto: CreateListingDto,
+		@UploadedFile() file?: Express.Multer.File,
 	): Promise<ListingEntity> {
 		this.ensureRole(user.role, [Role.HOST, Role.ADMIN]);
-		return this.listingService.create(user.id, dto);
+		return this.listingService.create(user.id, dto, file);
 	}
 
 	/** Update a listing (owner HOST only). */
